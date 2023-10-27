@@ -15,14 +15,14 @@ class RoundRobinScheduler:
         self.out = PacketHistory(10, [])
 
     def run(self):
-        last_q = 0
+        last_q = len(self.queues) - 1
         for t in range(1, 10):
             for i in range(len(self.queues)):
-                ci = (last_q + i) % len(self.queues)
+                ci = (last_q + i + 1) % len(self.queues)
                 q = self.queues[ci]
                 if not q.empty(t):
                     p = q.head_packet(t)
                     q.dequeue(t, 1)
                     self.out.push((t, p[1]))
-                    last_q = i
+                    last_q = ci
                     break
