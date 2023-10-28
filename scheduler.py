@@ -8,15 +8,15 @@ class RoundRobinScheduler:
     queues: List[PacketQueue]
     out: PacketHistory
 
-    def __init__(self, h1: PacketHistory, h2: PacketHistory):
+    def __init__(self, queue_size: int, hists: List[PacketHistory]):
         self.queues = []
-        self.queues.append(PacketQueue(5, h1))
-        self.queues.append(PacketQueue(5, h2))
-        self.out = PacketHistory(10, [])
+        for hist in hists:
+            self.queues.append(PacketQueue(queue_size, hist))
+        self.out = PacketHistory(hists[0].max_t(), [])
 
     def run(self):
         last_q = len(self.queues) - 1
-        for t in range(1, 10):
+        for t in range(1, self.out.max_t()):
             for i in range(len(self.queues)):
                 ci = (last_q + i + 1) % len(self.queues)
                 q = self.queues[ci]

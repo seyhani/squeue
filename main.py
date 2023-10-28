@@ -1,14 +1,14 @@
 from hist import PacketHistory
-from nqueue import PacketQueue
 from scheduler import RoundRobinScheduler
+from tiq import TimeIndexedQueue
 
 
 def main():
-    h1 = PacketHistory(10, [(2, 11), (2, 12), (4, 13), (4, 14), (4, 15), (6, 16)])
-    h2 = PacketHistory(10, [(2, 21), (2, 22), (4, 23), (4, 24), (7, 25), (7, 26)])
-    rr = RoundRobinScheduler(h1, h2)
-    rr.run()
-    print(rr.out.packets())
+    h = [0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]
+    q = TimeIndexedQueue(3, h)
+    print(q)
+    q.dequeue(7, 1)
+    print(q)
 
 
 if __name__ == '__main__':
