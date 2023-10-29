@@ -1,6 +1,6 @@
 from typing import List
 
-from z3 import Int, If, IntVal
+from z3 import Int, If, IntVal, Or
 
 QUEUE_CAP = 3
 TOTAL_TIME = 10
@@ -54,6 +54,19 @@ class SmtQueue:
         if t == 0:
             return ZERO
         return self.blog(t - 1) - self.deqs[t - 1] + self.enq(t - 1)
+
+    def head(self, t, i):
+        if t == 0:
+            return ZERO
+        return If(Or(IntVal(i) > self.blog(t), self.blog(t) == ZERO),
+                  ZERO,
+                  If(self.enq(t - 1) == 1,
+                     If(i == 0,
+                        IntVal(t - 1),
+                        self.head(t - 1, i - 1)
+                        ),
+                     self.head(t - 1, i))
+                  )
 
     def get_constrs(self):
         return list(map(lambda x: x >= 0, self.deqs))

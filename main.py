@@ -1,7 +1,19 @@
-from z3 import simplify, solve, Solver, Array, Int, IntSort, Ints, Store
+import time
+
+from z3 import simplify, solve, Solver, Array, Int, IntSort, Ints, Store, Bool, And
 
 from smt_queue import IntList, SmtQueue
 from tiq import TimeIndexedQueue
+
+
+class Watch:
+    def __init__(self):
+        self.last = time.time()
+
+    def lap(self):
+        now = time.time()
+        print(now - self.last)
+        self.last = now
 
 
 def t1():
@@ -13,7 +25,6 @@ def t1():
 
 
 def t2():
-    #    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4]
     h1 = [0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0]
     q = TimeIndexedQueue(3, h1)
     q.dequeue(7, 3)
@@ -22,8 +33,23 @@ def t2():
     print(q.elems_hist())
 
 
+def t3():
+    h1 = IntList("h1", 10)
+    q = SmtQueue("q1", h1)
+    s = Solver()
+    s.add(h1.get_constrs())
+    s.add(q.get_constrs())
+    s.add(h1[1] == 1)
+    s.add(h1[2] == 1)
+    s.add(h1[3] == 1)
+    s.add(h1[5] == 1)
+    print(s.check())
+    m = s.model()
+    w = Watch()
+
+
 def main():
-    t2()
+    t3()
 
 
 if __name__ == '__main__':
