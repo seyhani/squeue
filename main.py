@@ -2,6 +2,7 @@ import time
 
 from z3 import simplify, solve, Solver, Array, Int, IntSort, Ints, Store, Bool, And
 
+from mem_semt_queue import MemSmtQueue
 from smt_queue import IntList, SmtQueue
 from tiq import TimeIndexedQueue
 
@@ -35,7 +36,7 @@ def t2():
 
 def t3():
     h1 = IntList("h1", 10)
-    q = SmtQueue("q1", h1)
+    q = MemSmtQueue("q1", h1)
     s = Solver()
     s.add(h1.get_constrs())
     s.add(q.get_constrs())
@@ -46,6 +47,8 @@ def t3():
     print(s.check())
     m = s.model()
     w = Watch()
+    print(q.get_str(m))
+    w.lap()
 
 
 def main():
