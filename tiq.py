@@ -1,12 +1,8 @@
 from typing import List
 
-Payload = int
-
-NullPacket = 0
-
 
 class TimeIndexedQueue:
-    hist: List[Payload]
+    hist: List[int]
     deqs: List[int]
     cap: int
 
@@ -14,7 +10,6 @@ class TimeIndexedQueue:
         self.cap = cap
         self.hist = hist
         self.deqs = [0] * len(self.hist)
-        self.enqs = [0] * len(self.hist)
 
     def dequeue(self, t, count):
         self.deqs[t] = count
@@ -42,31 +37,42 @@ class TimeIndexedQueue:
             return 0
         return self.backlog(t - 1) - self.deqs[t - 1] + self.enq(t - 1)
 
-    def head(self, t):
-        if t == 0:
+    def head(self, t, i):
+        if t == 0 or i > self.backlog(t) or self.backlog(t) == 0:
             return 0
-        return min(list(filter(lambda i: self.cenq(i) > self.cdeq(t - 1), [i for i in range(len(self.hist))])))
+        if self.enq(t - 1) == 1:
+            if i == 0:
+                return t - 1
+            return self.head(t - 1, i - 1)
+        else:
+            return self.head(t - 1, i)
+
+    def elems(self, t):
+        return list(reversed(list(filter(lambda p: p > 0, [self.head(t, i) for i in range(self.cap)]))))
 
     def __for_all_t(self, f):
         return [f(t) for t in range(len(self.hist))]
+
+    def elems_hist(self):
+        return "".join(["\rt = {}:\t{}\n".format(t, self.elems(t)) for t in range(len(self.hist))])
 
     def __repr__(self):
         return """
         \r      \t {}
         \r hist:\t {}
-        \r  deq:\t {}
         \r  enq:\t {}
-        \r cenq:\t {}
-        \r cdeq:\t {}
         \r blog:\t {}
-        \r head:\t {}
+        \r  deq:\t {}
+        \r   h0:\t {}
+        \r   h1:\t {}
+        \r   h2:\t {}
         """.format(
-            [i for i in range(len(self.hist))],
+            [i % 10 for i in range(len(self.hist))],
             self.hist,
-            self.deqs,
             self.__for_all_t(self.enq),
-            self.__for_all_t(self.cenq),
-            self.__for_all_t(self.cdeq),
             self.__for_all_t(self.backlog),
-            self.__for_all_t(self.head)
+            self.deqs,
+            self.__for_all_t(lambda t: self.head(t, 0)),
+            self.__for_all_t(lambda t: self.head(t, 1)),
+            self.__for_all_t(lambda t: self.head(t, 2))
         )
