@@ -1,11 +1,10 @@
 import time
 
-from z3 import simplify, solve, Solver, Array, Int, IntSort, Ints, Store, Bool, And
+from z3 import Solver
 
-from mem_semt_queue import MemSmtQueue
-from simple_scheduler import SimpleScheduler
-from smt_queue import IntList, SmtQueue, TOTAL_TIME
-from smt_scheduler import SmtRoundRobinScheduler
+from symbolic.mem_smt_queue import MemSymbolicQueue
+from symbolic.queue import IntArray, TOTAL_TIME
+from symbolic.smt_scheduler import SmtRoundRobinScheduler
 from tiq import TimeIndexedQueue
 
 
@@ -30,17 +29,19 @@ def t1():
 def t2():
     h1 = [0, 11, 12, 13, 0, 0, 0, 0, 0, 0, 101, 111, 0, 0, 0]
     q = TimeIndexedQueue(3, h1)
-    q.dequeue(7, 2)
-    q.dequeue(8, 1)
+    q.dequeue(5, 1)
     print(q)
-    print(q.elems_hist())
-    print(q.head_pkt(12))
+    print(q.head_pkt(4))
+    print(q.head_pkt(5))
+    print(q.head_pkt(6))
+    # print(q.elems_hist())
+    # print(q.head_pkt(12))
 
 
 def t3():
-    h1 = IntList("h1", [11, 12, 0, 0, 15])
-    ho = IntList("ho")
-    q = MemSmtQueue("q1", h1)
+    h1 = IntArray("h1", [11, 12, 0, 0, 15])
+    ho = IntArray("ho")
+    q = MemSymbolicQueue("q1", h1)
     s = Solver()
     q.set_deqs({5: 1})
     s.add(q.constrs)
@@ -70,8 +71,8 @@ def t3():
 
 
 def t4():
-    h1 = IntList("h1", [0, 0, 12, 13, 14, 15, 0, 0, 0, 0])
-    h2 = IntList("h2", [0, 0, 22, 23, 24, 0, 0, 0, 0, 0])
+    h1 = IntArray("h1", [0, 0, 12, 13, 14, 15, 0, 0, 0, 0])
+    h2 = IntArray("h2", [0, 0, 22, 23, 24, 0, 0, 0, 0, 0])
     rr = SmtRoundRobinScheduler(h1, h2)
     rr.run()
     s = Solver()
@@ -85,6 +86,32 @@ def t4():
     print("ls: ", rr.last_served.get_str(m))
     print(rr.queues[0].get_str(m))
     print(rr.queues[0].get_str(m))
+
+
+def for_all_t(f):
+    return [f(t) for t in range(1, TOTAL_TIME)]
+
+
+def exists_t(f):
+    return []
+
+
+def rr_test():
+    h11 = IntArray("h11")
+    h12 = IntArray("h12")
+    h21 = IntArray("h21")
+    h22 = IntArray("h22")
+    rr = SmtRoundRobinScheduler(h11, h12, h21, h22)
+    constrs = []
+    constrs.extend(for_all_t(lambda t: h11.ccount(t) + h12.ccount(t) > t))
+    constrs.extend(for_all_t(lambda t: h21.ccount(t) + h22.ccount(t) > t))
+
+    query = []
+
+    h1_pkt_count = lambda t: rr.out.ccount(t, lambda p: p / 10 < 2)
+    h2_pkt_count = lambda t: rr.out.ccount(t, lambda p: p / 10 > 1)
+
+    query.extend(exists_t(lambda t: h1_pkt_count(t) - h2_pkt_count(t) >= 4))
 
 
 def main():

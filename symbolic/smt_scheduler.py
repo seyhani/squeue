@@ -1,22 +1,22 @@
 from typing import List
 
-from z3 import If, Implies, And, Or, Not
+from z3 import If, Implies, And, Not
 
-from mem_semt_queue import MemSmtQueue
-from smt_queue import SmtQueue, IntList, TOTAL_TIME, ZERO
+from mem_smt_queue import MemSymbolicQueue
+from symbolic.queue import SymbolicQueue, IntArray, TOTAL_TIME
 
 
 class SmtRoundRobinScheduler:
-    queues: List[SmtQueue]
-    out: IntList
-    last_served: IntList
+    queues: List[SymbolicQueue]
+    out: IntArray
+    last_served: IntArray
 
     def __init__(self, h1, h2):
         self.queues = []
-        self.queues.append(MemSmtQueue("q1", h1))
-        self.queues.append(MemSmtQueue("q2", h2))
-        self.out = IntList("qo", [0])
-        self.last_served = IntList("ls", [2])
+        self.queues.append(MemSymbolicQueue("q1", h1))
+        self.queues.append(MemSymbolicQueue("q2", h2))
+        self.out = IntArray("qo", [0])
+        self.last_served = IntArray("ls", [2])
         self.constrs = []
         self.constrs.extend(self.queues[0].constrs)
         self.constrs.extend(self.queues[1].constrs)
