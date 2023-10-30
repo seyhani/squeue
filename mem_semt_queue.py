@@ -7,11 +7,11 @@ class MemSmtQueue(SmtQueue):
         self.head_exprs = {}
         self.blog_exprs = {}
 
-    def head(self, t, i):
+    def tail(self, t, i):
         if (t, i) in self.head_exprs:
             return self.head_exprs[(t, i)]
         else:
-            expr = super().head(t, i)
+            expr = super().tail(t, i)
             self.head_exprs[(t, i)] = expr
             return expr
 

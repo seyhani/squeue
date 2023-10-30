@@ -37,18 +37,23 @@ class TimeIndexedQueue:
             return 0
         return self.backlog(t - 1) - self.deqs[t - 1] + self.enq(t - 1)
 
-    def head(self, t, i):
+    def tail(self, t, i):
         if t == 0 or i > self.backlog(t) or self.backlog(t) == 0:
             return 0
         if self.enq(t - 1) == 1:
             if i == 0:
                 return t - 1
-            return self.head(t - 1, i - 1)
+            return self.tail(t - 1, i - 1)
         else:
-            return self.head(t - 1, i)
+            return self.tail(t - 1, i)
+
+    def head_pkt(self, t):
+        if t == 0:
+            return 0
+        return self.hist[self.tail(t, self.backlog(t) - 1)]
 
     def elems(self, t):
-        return list(reversed(list(filter(lambda p: p > 0, [self.head(t, i) for i in range(self.cap)]))))
+        return list(reversed(list(filter(lambda p: p > 0, [self.tail(t, i) for i in range(self.backlog(t))]))))
 
     def __for_all_t(self, f):
         return [f(t) for t in range(len(self.hist))]
@@ -72,7 +77,7 @@ class TimeIndexedQueue:
             self.__for_all_t(self.enq),
             self.__for_all_t(self.backlog),
             self.deqs,
-            self.__for_all_t(lambda t: self.head(t, 0)),
-            self.__for_all_t(lambda t: self.head(t, 1)),
-            self.__for_all_t(lambda t: self.head(t, 2))
+            self.__for_all_t(lambda t: self.tail(t, 0)),
+            self.__for_all_t(lambda t: self.tail(t, 1)),
+            self.__for_all_t(lambda t: self.tail(t, 2))
         )

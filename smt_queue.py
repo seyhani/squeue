@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Dict
 
-from z3 import Int, If, IntVal, Or
+from z3 import Int, If, IntVal, Or, IntSort, Array
 
 QUEUE_CAP = 3
 TOTAL_TIME = 10
@@ -8,21 +8,18 @@ ZERO = IntVal(0)
 
 
 class IntList:
-    def __init__(self, name, size):
+    def __init__(self, name, hist=[]):
         self.name = name
-        self.exprs = []
-        for i in range(size):
-            expr = Int("{}[{}]".format(name, i))
-            self.exprs.append(expr)
+        self.arr = Array(name, IntSort(), IntSort())
+        self.constrs = [self.arr[t] >= 0 for t in range(TOTAL_TIME)]
+        for i, h in enumerate(hist):
+            self.constrs.append(self.arr[i] == hist[i])
 
     def __getitem__(self, i):
-        return self.exprs[i]
-
-    def get_constrs(self):
-        return list(map(lambda x: x >= 0, self.exprs))
+        return self.arr[i]
 
     def get_str(self, model):
-        return list(map(lambda x: model[x], self.exprs))
+        return [model.eval(self.arr[t]) for t in range(TOTAL_TIME)]
 
 
 def min_expr(a, b):
@@ -30,16 +27,24 @@ def min_expr(a, b):
 
 
 class SmtQueue:
-    def __init__(self, name, hist):
+    def __init__(self, name, hist: IntList):
         self.hist = hist
-        self.deqs = IntList("{}_deqs".format(name), TOTAL_TIME)
+        self.deqs = IntList("{}_deqs".format(name))
+        self.constrs = []
+        self.constrs.extend(self.hist.constrs)
+        self.constrs.extend(self.deqs.constrs)
+        self.constrs.append(self.deqs[0] == 0)
+
+    def set_deqs(self, deqs: Dict[int, int]):
+        for t in range(TOTAL_TIME):
+            self.constrs.append(self.deqs[t] == deqs.get(t, 0))
 
     def arr(self, t):
         return If(self.hist[t] > 0, True, False)
 
     def cdeq(self, t):
         if t == 0:
-            return ZERO
+            return self.deqs[0]
         return self.cdeq(t - 1) + self.deqs[t]
 
     def enq(self, t):
@@ -55,21 +60,24 @@ class SmtQueue:
             return ZERO
         return self.blog(t - 1) - self.deqs[t - 1] + self.enq(t - 1)
 
-    def head(self, t, i):
+    def tail(self, t, i):
         if t == 0:
             return ZERO
-        return If(Or(IntVal(i) > self.blog(t), self.blog(t) == ZERO),
+        return If(Or(i > self.blog(t), self.blog(t) == ZERO),
                   ZERO,
                   If(self.enq(t - 1) == 1,
                      If(i == 0,
                         IntVal(t - 1),
-                        self.head(t - 1, i - 1)
+                        self.tail(t - 1, i - 1)
                         ),
-                     self.head(t - 1, i))
+                     self.tail(t - 1, i))
                   )
 
-    def get_constrs(self):
-        return list(map(lambda x: x >= 0, self.deqs))
+    def head(self, t):
+        return self.tail(t, self.blog(t) - 1)
+
+    def head_pkt(self, t):
+        return self.hist[self.head(t)]
 
     def __for_all_t(self, f, model):
         return [model.eval(f(t)) for t in range(TOTAL_TIME)]
@@ -83,6 +91,7 @@ class SmtQueue:
         \r cenq:\t {}
         \r cdeq:\t {}
         \r blog:\t {}
+        \r head:\t {}
         """.format(
             [t for t in range(TOTAL_TIME)],
             self.hist.get_str(model),
@@ -90,5 +99,6 @@ class SmtQueue:
             self.__for_all_t(self.enq, model),
             self.__for_all_t(self.cenq, model),
             self.__for_all_t(self.cdeq, model),
-            self.__for_all_t(self.blog, model)
+            self.__for_all_t(self.blog, model),
+            self.__for_all_t(self.head, model)
         )
