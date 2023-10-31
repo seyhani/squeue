@@ -1,14 +1,14 @@
-from typing import List, Dict
+from typing import List
 
-from z3 import If, Implies, And, Not, ModelRef, ExprRef, IntVal, ArithRef, BoolRef, ArrayRef, BoolVal, Store, Select
+from z3 import If, Implies, And, ModelRef, ExprRef, IntVal, ArithRef, BoolRef
 
 from symbolic.arr import IntArray, BoolArray
-from symbolic.base import SymbolicStructure
+from symbolic.base import TimeIndexedStructure
 from symbolic.queue import SymbolicQueue
-from symbolic.util import find_idx_expr, memoize, eq, gte, lte, ZERO
+from symbolic.util import eq, gte, lte, ZERO
 
 
-class RoundRobinScheduler(SymbolicStructure):
+class RoundRobinScheduler(TimeIndexedStructure):
     in_queue_size: int
     queues: List[SymbolicQueue]
     out: IntArray
@@ -17,10 +17,12 @@ class RoundRobinScheduler(SymbolicStructure):
     __constrs: List[ExprRef]
 
     def __init__(self, name: str, in_queue_size: int, hists: List[IntArray]):
-        super().__init__(name)
+        super().__init__(name, hists[0].size)
+        for h in hists:
+            if h.size != self.total_time:
+                raise RuntimeError("hists must have same size!")
         self.__constrs = []
         self.in_queue_size = in_queue_size
-        self.total_time = hists[0].size
         self.queues = [SymbolicQueue("q_{}".format(i), in_queue_size, h) for i, h in enumerate(hists)]
         self.out = IntArray("qo", self.total_time)
         self.served = IntArray("served", self.total_time)

@@ -7,9 +7,8 @@ from z3 import ExprRef, ModelRef
 class SymbolicStructure(ABC):
     name: str
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, **kwargs):
         self.name = name
-        self.__memo = {}
 
     @abstractmethod
     def constrs(self) -> List[ExprRef]:
@@ -21,3 +20,11 @@ class SymbolicStructure(ABC):
 
     def eval_to_str(self, model: ModelRef) -> str:
         return str(self.eval(model))
+
+
+class TimeIndexedStructure(SymbolicStructure, ABC):
+    total_time: int
+
+    def __init__(self, name: str, total_time, **kwargs):
+        super().__init__(name, **kwargs)
+        self.total_time = total_time

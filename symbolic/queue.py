@@ -1,34 +1,27 @@
-from typing import Dict, List, Set
+from typing import List
 
-from z3 import If, IntVal, Or, IntSort, Array, Model, ModelRef, ExprRef, ArithRef, ArrayRef
+from z3 import If, IntVal, Or, ModelRef, ExprRef, ArithRef, ArrayRef
 
 from symbolic.arr import IntArray
-from symbolic.base import SymbolicStructure
+from symbolic.base import SymbolicStructure, TimeIndexedStructure
 from symbolic.util import min_expr, memoize, eq, gte, ZERO, lte
 
-QUEUE_CAP = 3
-TOTAL_TIME = 10
 
-
-class SymbolicQueue(SymbolicStructure):
-    size: int
+class SymbolicQueue(TimeIndexedStructure):
     hist: IntArray
     deqs: IntArray
 
     def __init__(self, name: str, size: int, hist: IntArray):
-        super().__init__(name)
+        super().__init__(name, hist.size)
         self.size = size
         self.hist = hist
         self.deq_constrs = {}
-        self.deqs = IntArray("{}_deqs".format(name), self.total_time())
+        self.deqs = IntArray("{}_deqs".format(name), self.total_time)
         self.deqs.add_constr(0, eq(ZERO))
-        for t in range(self.total_time()):
+        for t in range(self.total_time):
             self.deqs.add_constr(t, gte(ZERO))
-        for t in range(self.total_time()):
+        for t in range(self.total_time):
             self.deqs.add_constr(t, lte(self.blog(t)))
-
-    def total_time(self):
-        return self.hist.size
 
     def constrs(self) -> List[ExprRef]:
         constrs = []
@@ -39,7 +32,7 @@ class SymbolicQueue(SymbolicStructure):
 
     def eval(self, model: ModelRef):
         concrete_queue = [[]]
-        for t in range(1, TOTAL_TIME):
+        for t in range(1, self.total_time):
             elems = []
             for i in range(model.eval(self.blog(t)).as_long()):
                 elem_idx = model.eval(self.tail(t, i))
@@ -97,7 +90,7 @@ class SymbolicQueue(SymbolicStructure):
         return self.hist[self.head(t)]
 
     def __for_all_t(self, f, model):
-        return [model.eval(f(t)) for t in range(TOTAL_TIME)]
+        return [model.eval(f(t)) for t in range(self.total_time)]
 
     def eval_to_str(self, model: ModelRef):
         return """
@@ -112,7 +105,7 @@ class SymbolicQueue(SymbolicStructure):
         \r blog:\t {}
         \r head:\t {}
         """.format(
-            [t for t in range(TOTAL_TIME)],
+            [t for t in range(self.total_time)],
             self.hist.eval(model),
             self.__for_all_t(self.arr, model),
             self.__for_all_t(self.cap, model),
