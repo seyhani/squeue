@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List
 
-from z3 import ExprRef, ModelRef, IntVal
+from z3 import ExprRef, ModelRef
 
 
 class SymbolicStructure(ABC):

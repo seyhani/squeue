@@ -57,8 +57,12 @@ class SymbolicQueue(SymbolicStructure):
         return self.cdeq(t - 1) + self.deqs[t]
 
     @memoize
+    def cap(self, t) -> ArithRef:
+        return self.size - (self.blog(t) - self.deqs[t])
+
+    @memoize
     def enq(self, t) -> ExprRef:
-        return min_expr(self.arr(t), self.size - (self.blog(t) - self.deqs[t]))
+        return min_expr(self.arr(t), self.cap(t))
 
     @memoize
     def cenq(self, t) -> ArithRef:
@@ -99,6 +103,8 @@ class SymbolicQueue(SymbolicStructure):
         return """
         \r      \t {}
         \r hist:\t {}
+        \r  arr:\t {}
+        \r  cap:\t {}
         \r  deq:\t {}
         \r  enq:\t {}
         \r cenq:\t {}
@@ -108,6 +114,8 @@ class SymbolicQueue(SymbolicStructure):
         """.format(
             [t for t in range(TOTAL_TIME)],
             self.hist.eval(model),
+            self.__for_all_t(self.arr, model),
+            self.__for_all_t(self.cap, model),
             self.deqs.eval(model),
             self.__for_all_t(self.enq, model),
             self.__for_all_t(self.cenq, model),

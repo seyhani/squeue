@@ -42,10 +42,12 @@ def memoize(func):
         mem[func] = {}
 
     def _memoize(self, *args):
-        if args in mem[func]:
-            return mem[func][args]
+        if self not in mem[func]:
+            mem[func][self] = {}
+        if args in mem[func][self]:
+            return mem[func][self][args]
         res = func(self, *args)
-        mem[func][args] = res
+        mem[func][self][args] = res
         return res
 
     return _memoize

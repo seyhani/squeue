@@ -13,7 +13,7 @@ class SymbolicArray(SymbolicStructure):
     def __init__(self, name, size, sort):
         super().__init__(name)
         self.size = size
-        self.arr = Array(name, sort, sort)
+        self.arr = Array(name, IntSort(), sort)
         self.__constrs = []
 
     def __getitem__(self, i: int) -> ArrayRef:
