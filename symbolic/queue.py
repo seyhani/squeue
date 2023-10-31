@@ -1,10 +1,10 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from z3 import If, IntVal, Or, IntSort, Array, Model, ModelRef, ExprRef, ArithRef, ArrayRef
 
 from symbolic.arr import IntArray
-from symbolic.base import SymbolicStructure, ZERO
-from symbolic.util import min_expr, memoize
+from symbolic.base import SymbolicStructure
+from symbolic.util import min_expr, memoize, eq, gte, ZERO, lte
 
 QUEUE_CAP = 3
 TOTAL_TIME = 10
@@ -19,18 +19,20 @@ class SymbolicQueue(SymbolicStructure):
         super().__init__(name)
         self.size = size
         self.hist = hist
+        self.deq_constrs = {}
         self.deqs = IntArray("{}_deqs".format(name), self.total_time())
-        self.deqs[0] = ZERO
-
-    def set_deqs(self, deqs: Dict[int, int]):
+        self.deqs.add_constr(0, eq(ZERO))
         for t in range(self.total_time()):
-            self.deqs[t] = IntVal(deqs.get(t, ZERO))
+            self.deqs.add_constr(t, gte(ZERO))
+        for t in range(self.total_time()):
+            self.deqs.add_constr(t, lte(self.blog(t)))
 
     def total_time(self):
         return self.hist.size
 
     def constrs(self) -> List[ExprRef]:
         constrs = []
+        constrs.extend(self.deq_constrs.values())
         constrs.extend(self.hist.constrs())
         constrs.extend(self.deqs.constrs())
         return constrs
@@ -49,7 +51,7 @@ class SymbolicQueue(SymbolicStructure):
         return If(self.hist[t] > ZERO, 1, 0)
 
     @memoize
-    def cdeq(self, t) -> ExprRef:
+    def cdeq(self, t) -> ArithRef:
         if t == 0:
             return self.deqs[0]
         return self.cdeq(t - 1) + self.deqs[t]

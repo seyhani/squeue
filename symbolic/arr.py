@@ -1,8 +1,19 @@
-from typing import List, Dict
+from typing import List, Callable
 
 from z3 import Array, IntSort, ModelRef, ExprRef, IntVal, ArrayRef
 
 from symbolic.base import SymbolicStructure
+from symbolic.util import eq
+
+
+class BoolArray(SymbolicStructure):
+    size: int
+
+    def constrs(self) -> List[ExprRef]:
+        pass
+
+    def eval(self, model: ModelRef):
+        pass
 
 
 class IntArray(SymbolicStructure):
@@ -14,14 +25,12 @@ class IntArray(SymbolicStructure):
         self.size = size
         self.arr = Array(name, IntSort(), IntSort())
         self.__constrs = []
-        for i in range(size):
-            self.__constrs.append(self.arr[i] >= 0)
 
-    def __getitem__(self, i) -> ArrayRef:
+    def __getitem__(self, i: int) -> ArrayRef:
         return self.arr[i]
 
-    def __setitem__(self, i, v: ExprRef):
-        self.__constrs.append(self[i] == v)
+    def add_constr(self, i: int, expr_producer: Callable[[ArrayRef], ExprRef]):
+        self.__constrs.append(expr_producer(self[i]))
 
     def constrs(self) -> List[ExprRef]:
         return self.__constrs
@@ -33,5 +42,5 @@ class IntArray(SymbolicStructure):
     def create(name: str, ints: List[int]):
         int_array = IntArray(name, len(ints))
         for i, v in enumerate(ints):
-            int_array[i] = IntVal(v)
+            int_array.add_constr(i, eq(IntVal(v)))
         return int_array

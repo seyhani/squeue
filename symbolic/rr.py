@@ -1,27 +1,51 @@
-from typing import List
+from typing import List, Dict
 
-from z3 import If, Implies, And, Not
+from z3 import If, Implies, And, Not, ModelRef, ExprRef, IntVal, ArithRef, BoolRef, ArrayRef, BoolVal
 
-from mem_smt_queue import MemSymbolicQueue
-from symbolic.queue import SymbolicQueue, IntArray, TOTAL_TIME
+from symbolic.arr import IntArray
+from symbolic.base import SymbolicStructure
+from symbolic.queue import SymbolicQueue
+from symbolic.util import find_idx_expr, memoize
 
 
-class SmtRoundRobinScheduler:
+class RoundRobinScheduler(SymbolicStructure):
+    in_queue_size: int
     queues: List[SymbolicQueue]
     out: IntArray
-    last_served: IntArray
 
-    def __init__(self, h1, h2):
-        self.queues = []
-        self.queues.append(MemSymbolicQueue("q1", h1))
-        self.queues.append(MemSymbolicQueue("q2", h2))
-        self.out = IntArray("qo", [0])
-        self.last_served = IntArray("ls", [2])
-        self.constrs = []
-        self.constrs.extend(self.queues[0].constrs)
-        self.constrs.extend(self.queues[1].constrs)
-        self.constrs.extend(self.out.constrs)
-        self.constrs.extend(self.last_served.constrs)
+    def __init__(self, name: str, in_queue_size: int, hists: List[IntArray]):
+        super().__init__(name)
+        self.in_queue_size = in_queue_size
+        self.total_time = hists[0].size
+        self.queues = [SymbolicQueue("q_{}".format(i), in_queue_size, h) for i, h in enumerate(hists)]
+        self.out = IntArray("qo", self.total_time)
+
+    def constrs(self) -> List[ExprRef]:
+        constrs = []
+        for queue in self.queues:
+            constrs.extend(queue.constrs())
+        constrs.extend(self.out.constrs())
+        return constrs
+
+    def no_deq(self, t) -> BoolRef:
+        return And([q.deqs[t] == 0 for q in self.queues])
+
+    def deqs(self, t) -> List[ArrayRef]:
+        return [q.deqs[t] for q in self.queues]
+
+    def next_candidate_serve(self, t) -> ArithRef:
+        return (self.last_served(t - 1) + IntVal(1)) % len(self.queues)
+
+    @memoize
+    def last_served(self, t) -> ArithRef:
+        if t == 0:
+            return IntVal(len(self.queues) - 1)
+        return If(self.no_deq(t), self.last_served(t - 1),
+                  find_idx_expr(self.deqs(t), IntVal(1))
+                  )
+
+    def eval(self, model: ModelRef):
+        pass
 
     def ls_constrs(self, t):
         constrs = []
@@ -35,8 +59,21 @@ class SmtRoundRobinScheduler:
             Implies(And(Not(q1_empty), Not(q2_empty)), If(ci == 1, self.last_served[t] == 1, self.last_served[t] == 2)))
         return constrs
 
+    def not_empty(self, t) -> IntArray:
+        pass
+
     def out_constrs(self, t):
+
         constrs = []
+        for i in range(len(self.queues)):
+            constr = And()
+            candidate = self.next_candidate_serve(t)
+            previous_queues_empty_expr = BoolVal(True)
+            for j in range(i):
+                pass
+            constr = And(self.not_empty(t)[candidate] == 1, )
+
+
         q1_empty = self.queues[0].blog(t) == 0
         q2_empty = self.queues[1].blog(t) == 0
         ci = (self.last_served[t - 1] % 2) + 1

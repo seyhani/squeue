@@ -3,8 +3,6 @@ from typing import List, Dict
 
 from z3 import ExprRef, ModelRef, IntVal
 
-ZERO = IntVal(0)
-
 
 class SymbolicStructure(ABC):
     name: str

@@ -4,7 +4,7 @@ from z3 import Solver
 
 from symbolic.mem_smt_queue import MemSymbolicQueue
 from symbolic.queue import IntArray, TOTAL_TIME
-from symbolic.smt_scheduler import SmtRoundRobinScheduler
+from symbolic.rr import SmtRoundRobinScheduler
 from tiq import TimeIndexedQueue
 
 
