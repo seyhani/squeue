@@ -6,13 +6,10 @@ from symbolic.smt_solver import SmtSolver
 
 
 def t():
-    s = Solver()
-    s.set(unsat_core=True)
-    s.set('smt.arith.random_initial_value', True)
-    s.set('random_seed', 200)
+    s = SmtSolver()
     h1 = SymbolicHistory("h1", 10)
     h2 = SymbolicHistory("h2", 10)
-    rr = RoundRobinScheduler("rr1", 3, [h1, h2])
+    rr = RoundRobinScheduler("rr1", 15, 3, [h1, h2])
     rr.run()
 
     for t in range(1, 10):
@@ -42,62 +39,47 @@ def ccount(hist: SymbolicHistory, id: int, t: int):
 
 
 def test():
-    h11 = SymbolicHistory("h11", 10)
-    print(h11.constrs())
-    s = SmtSolver()
-    s.add_constrs(h11)
-    s.add_constr(h11[1] == 2, "bar")
-    s.add_constr(h11[1] == 3, "baz")
-    # s.add_constr(h11[1] == 2)
-    # s.add_constr(h11[1] == 3)
-    # m = s.check_sat()
-    # print(h11.eval(m))
-    core = s.check_unsat()
-    print(core)
-    return
     T = 12
     qs = 3
-    s = Solver()
-    s.set('smt.arith.random_initial_value', True)
-    s.set('random_seed', 300)
-    s.set(unsat_core=True)
+    s = SmtSolver()
 
     h11 = SymbolicHistory("h11", T)
+    # s.add_struct(h11)
     h12 = SymbolicHistory("h12", T)
+    # s.add_struct(h12)
     rr1 = RoundRobinScheduler("rr1", T, qs, [h11, h12])
     rr1.run()
-    add_constrs(s, rr1)
+    s.add_struct(rr1)
 
     h21 = SymbolicHistory("h21", T)
+    # s.add_struct(h21)
     h22 = SymbolicHistory("h22", T)
+    # s.add_struct(h22)
     rr2 = RoundRobinScheduler("rr2", T, qs, [h21, h22])
     rr2.run()
-    add_constrs(s, rr2)
+    s.add_struct(rr2)
 
     rr = RoundRobinScheduler("rr", T, qs, [rr1.out, rr2.out])
     rr.run()
-    add_constrs(s, rr)
+    s.add_struct(rr)
 
     for t in range(1, T):
-        s.assert_and_track(Or(h11[t] == 0, h11[t] == 1), "h11[{}] = 0 | 1".format(t))
-        s.assert_and_track(Or(h21[t] == 0, h21[t] == 1), "h21[{}] = 0 | 1".format(t))
-        s.assert_and_track(Or(h12[t] == 0, h12[t] == 2), "h12[{}] = 0 | 2".format(t))
-        s.assert_and_track(Or(h22[t] == 0, h22[t] == 2), "h22[{}] = 0 | 2".format(t))
-        s.assert_and_track(Xor(h11[t] > 0, h21[t] > 0), "enq[{}](h11,h21) == 1".format(t))
-        s.assert_and_track(Xor(h12[t] > 0, h22[t] > 0), "enq[{}](h12,h22) == 1".format(t))
+        s.add_constr(Or(h11[t] == 0, h11[t] == 1))
+        s.add_constr(Or(h21[t] == 0, h21[t] == 1))
+        s.add_constr(Or(h12[t] == 0, h12[t] == 2))
+        s.add_constr(Or(h22[t] == 0, h22[t] == 2))
+        s.add_constr(Xor(h11[t] > 0, h21[t] > 0))
+        s.add_constr(Xor(h12[t] > 0, h22[t] > 0))
     #
-    s.assert_and_track(Or([And(rr.out[t] == 1, rr.out[t - 1] == 1, rr.out[t - 2] == 1) for t in range(2, T)]),
-                       "starvation")
-
-    print(s.check())
-    m = s.model()
-    print("rr1:", rr1.eval(m))
-    print("rr2:", rr2.eval(m))
-    print("rro:", rr.eval(m))
-    print("h11:", h11.eval(m))
-    print("h12:", h12.eval(m))
-    print("h21:", h21.eval(m))
-    print("h22:", h22.eval(m))
+    s.add_constr(Or([And(rr.out[t] == 1, rr.out[t - 1] == 1, rr.out[t - 2] == 1) for t in range(2, T)]))
+    m = s.check_sat()
+    print("h11: ", h11.eval(m))
+    print("h21: ", h21.eval(m))
+    print("h12: ", h12.eval(m))
+    print("h22: ", h22.eval(m))
+    print("rr1: ", rr1.out.eval(m))
+    print("rr2: ", rr2.out.eval(m))
+    print("rro: ", rr.out.eval(m))
 
 
 def test2():
@@ -161,9 +143,9 @@ def test3():
 
 def main():
     # t()
-    # test()
+    test()
     # test2()
-    test3()
+    # test3()
 
 
 if __name__ == '__main__':

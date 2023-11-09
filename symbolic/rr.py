@@ -4,6 +4,7 @@ from z3 import If, Implies, And, ModelRef, ExprRef, IntVal, ArithRef, BoolRef
 
 from symbolic.arr import IntArray, BoolArray
 from symbolic.base import TimeIndexedStructure
+from symbolic.hist import SymbolicHistory
 from symbolic.squeue import SymbolicQueue
 from symbolic.util import eq, gte, lte, ZERO
 
@@ -20,12 +21,12 @@ class RoundRobinScheduler(TimeIndexedStructure):
         super().__init__(name=name, total_time=total_time)
         self.__constrs = []
         self.in_queue_size = in_queue_size
-        self.queues = [SymbolicQueue("q_{}".format(i), in_queue_size, h) for i, h in enumerate(hists)]
-        self.out = IntArray(name="qo", size=self.total_time)
-        self.served = IntArray(name="served", size=self.total_time)
+        self.queues = [SymbolicQueue("{}_q_{}".format(name, i), in_queue_size, h) for i, h in enumerate(hists)]
+        self.out = SymbolicHistory(name="{}_qo".format(name), total_time=self.total_time)
+        self.served = IntArray(name="{}_served".format(name), size=self.total_time)
         self.empty = []
         for t in range(self.total_time):
-            empty = BoolArray("empty[{}]".format(t), len(self.queues))
+            empty = BoolArray("{}_empty[{}]".format(name, t), len(self.queues))
             for i in range(len(self.queues)):
                 empty.add_constr(i, eq((self.queues[i].blog(t) == 0)))
             self.empty.append(empty)

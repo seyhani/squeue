@@ -6,14 +6,17 @@ from symbolic.test_util import instantiate, assert_unsat
 def test_creation():
     s = SmtSolver()
     i1 = IntArray.create("i1", [0, 1, 2])
-    s.add_constrs(i1)
+    s.add_struct(i1)
     concrete_array, arr_str = instantiate(i1)
     assert concrete_array == [0, 1, 2]
 
 
 def test_custom_constraint():
     i1 = IntArray.create("i1", [0, 1, 2])
-    assert_unsat(i1, i1[1] == 3)
+    s = SmtSolver()
+    s.add_struct(i1)
+    s.add_constr(i1[1] == 3)
+    s.check_unsat()
 
 
 def main():
