@@ -1,5 +1,5 @@
 from symbolic.hist import SymbolicHistory
-from symbolic.queue import SymbolicQueue
+from symbolic.squeue import SymbolicQueue
 from symbolic.test_util import instantiate
 
 

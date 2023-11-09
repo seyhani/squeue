@@ -1,6 +1,6 @@
 from typing import List
 
-from z3 import If, IntVal, Or, ModelRef, ExprRef, ArithRef, ArrayRef
+from z3 import If, IntVal, Or, ModelRef, ExprRef, ArithRef, ArrayRef, BoolRef, And
 
 from symbolic.arr import IntArray
 from symbolic.base import SymbolicStructure, TimeIndexedStructure
@@ -12,11 +12,11 @@ class SymbolicQueue(TimeIndexedStructure):
     deqs: IntArray
 
     def __init__(self, name: str, size: int, hist: IntArray):
-        super().__init__(name, hist.size)
+        super().__init__(name=name, total_time=hist.size)
         self.size = size
         self.hist = hist
         self.deq_constrs = {}
-        self.deqs = IntArray("{}_deqs".format(name), self.total_time)
+        self.deqs = IntArray(name="{}_deqs".format(name), size=self.total_time)
         self.deqs.add_constr(0, eq(ZERO))
         for t in range(self.total_time):
             self.deqs.add_constr(t, gte(ZERO))
@@ -83,9 +83,15 @@ class SymbolicQueue(TimeIndexedStructure):
                      self.tail(t - 1, i))
                   )
 
+    @memoize
     def head(self, t) -> ArithRef:
         return self.tail(t, self.blog(t) - 1)
 
+    @memoize
+    def drop(self, t) -> ArithRef:
+        return If(And(self.arr(t) == 1, self.enq(t) == 0), 1, 0)
+
+    @memoize
     def head_pkt(self, t) -> ArrayRef:
         return self.hist[self.head(t)]
 
@@ -96,6 +102,7 @@ class SymbolicQueue(TimeIndexedStructure):
         return """
         \r      \t {}
         \r hist:\t {}
+        \r drop:\t {}
         \r  arr:\t {}
         \r  cap:\t {}
         \r  deq:\t {}
@@ -107,6 +114,7 @@ class SymbolicQueue(TimeIndexedStructure):
         """.format(
             [t for t in range(self.total_time)],
             self.hist.eval(model),
+            self.__for_all_t(self.drop, model),
             self.__for_all_t(self.arr, model),
             self.__for_all_t(self.cap, model),
             self.deqs.eval(model),
