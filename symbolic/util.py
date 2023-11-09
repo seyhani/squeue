@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Tuple
 
-from z3 import If, ExprRef, Int, ArithRef, IntVal
+from z3 import If, ExprRef, IntVal, Solver, Z3Exception
+
+from symbolic.base import SymbolicStructure
 
 ZERO = IntVal(0)
 
@@ -21,6 +23,7 @@ def gte(rhs: ExprRef):
         return lhs >= rhs
 
     return _gte
+
 
 def lte(rhs: ExprRef):
     def _lte(lhs: ExprRef):

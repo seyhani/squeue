@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 from z3 import ExprRef, ModelRef
+
+Time = int
+
+TimeRange = Tuple[Time, Time]
 
 
 class SymbolicStructure(ABC):
@@ -25,6 +29,6 @@ class SymbolicStructure(ABC):
 class TimeIndexedStructure(SymbolicStructure, ABC):
     total_time: int
 
-    def __init__(self, name: str, total_time, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, total_time, **kwargs):
+        super().__init__(**kwargs)
         self.total_time = total_time
