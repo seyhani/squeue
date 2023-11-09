@@ -1,5 +1,3 @@
-from random import random
-
 from z3 import Solver, Or, IntVal, If, And, Xor, Int
 
 from symbolic.hist import SymbolicHistory
@@ -153,7 +151,7 @@ def test3():
     # h2 = SymbolicHistory.create("h2", [0, 2, 0, 1, 0, 2, 0, 1, 0, 2], T)
     rr = RoundRobinScheduler("rr", T, qs, [h1, h2])
     rr.run()
-    s.add_constrs(rr)
+    s.add_struct(rr)
     m = s.check_sat()
     # print(rr.queues[0].eval_to_str(m))
     # print(rr.queues[1].eval_to_str(m))

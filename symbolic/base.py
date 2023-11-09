@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List, Tuple
 
 from z3 import ExprRef, ModelRef
@@ -6,6 +7,12 @@ from z3 import ExprRef, ModelRef
 Time = int
 
 TimeRange = Tuple[Time, Time]
+
+
+@dataclass
+class LabeledConstraint:
+    expr: ExprRef
+    label: str
 
 
 class SymbolicStructure(ABC):

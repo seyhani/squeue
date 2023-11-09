@@ -4,7 +4,7 @@ from z3 import If, Implies, And, ModelRef, ExprRef, IntVal, ArithRef, BoolRef
 
 from symbolic.arr import IntArray, BoolArray
 from symbolic.base import TimeIndexedStructure
-from symbolic.queue import SymbolicQueue
+from symbolic.squeue import SymbolicQueue
 from symbolic.util import eq, gte, lte, ZERO
 
 
@@ -16,16 +16,13 @@ class RoundRobinScheduler(TimeIndexedStructure):
     served: IntArray
     __constrs: List[ExprRef]
 
-    def __init__(self, name: str, in_queue_size: int, hists: List[IntArray]):
-        super().__init__(name, hists[0].size)
-        for h in hists:
-            if h.size != self.total_time:
-                raise RuntimeError("hists must have same size!")
+    def __init__(self, name: str, total_time: int, in_queue_size: int, hists: List[IntArray]):
+        super().__init__(name=name, total_time=total_time)
         self.__constrs = []
         self.in_queue_size = in_queue_size
         self.queues = [SymbolicQueue("q_{}".format(i), in_queue_size, h) for i, h in enumerate(hists)]
-        self.out = IntArray("qo", self.total_time)
-        self.served = IntArray("served", self.total_time)
+        self.out = IntArray(name="qo", size=self.total_time)
+        self.served = IntArray(name="served", size=self.total_time)
         self.empty = []
         for t in range(self.total_time):
             empty = BoolArray("empty[{}]".format(t), len(self.queues))
