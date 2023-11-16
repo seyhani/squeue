@@ -1,6 +1,6 @@
 from typing import List, Callable
 
-from z3 import Array, IntSort, ModelRef, ExprRef, IntVal, ArrayRef, BoolSort
+from z3 import Array, IntSort, ModelRef, ExprRef, IntVal, ArrayRef, BoolSort, ArithRef
 
 from symbolic.base import SymbolicStructure
 from symbolic.util import eq
@@ -16,7 +16,7 @@ class SymbolicArray(SymbolicStructure):
         self.arr = Array(name, IntSort(), sort)
         self.__constrs = []
 
-    def __getitem__(self, i: int) -> ArrayRef:
+    def __getitem__(self, i: int) -> ArithRef:
         return self.arr[i]
 
     def add_constr(self, i: int, expr_producer: Callable[[ArrayRef], ExprRef]):

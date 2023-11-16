@@ -22,13 +22,16 @@ class SmtSolver:
         self.structs = {}
 
     def add_struct(self, struct: SymbolicStructure):
-        print("\n\tAdding constraints for: {} \n".format(struct.name))
         for c in struct.constrs():
             self.add_constr(c)
         self.structs[struct.name] = struct
 
     def add_constr(self, constr: ExprRef):
         self.solver.add(constr)
+
+    def add_constrs(self, constrs: [ExprRef]):
+        for constr in constrs:
+            self.add_constr(constr)
         # try:
         #     self.solver.assert_and_track(constr.expr, constr.label)
         # except Z3Exception as e:

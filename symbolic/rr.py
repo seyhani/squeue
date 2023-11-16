@@ -12,7 +12,7 @@ from symbolic.util import eq, gte, lte, ZERO
 class RoundRobinScheduler(TimeIndexedStructure):
     in_queue_size: int
     queues: List[SymbolicQueue]
-    out: IntArray
+    out: SymbolicHistory
     empty: List[BoolArray]
     served: IntArray
     __constrs: List[ExprRef]

@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from z3 import If, ExprRef, IntVal, Solver, Z3Exception
+from z3 import If, ExprRef, IntVal, Solver, Z3Exception, Or, And, ArithRef, BoolRef
 
 from symbolic.base import SymbolicStructure
 
@@ -9,6 +9,18 @@ ZERO = IntVal(0)
 
 def min_expr(a: ExprRef, b: ExprRef) -> ExprRef:
     return If(a <= b, a, b)
+
+
+def abs_expr(a: ArithRef) -> ArithRef:
+    return If(a > ZERO, a, - a)
+
+
+def exists(f, rng):
+    return Or([f(t) for t in rng])
+
+
+def forall(f, rng):
+    return And([f(t) for t in rng])
 
 
 def find_idx_expr(arr: List[ExprRef], match: ExprRef) -> ExprRef:
