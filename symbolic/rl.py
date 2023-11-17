@@ -7,7 +7,7 @@ from symbolic.hist import SymbolicHistory
 from symbolic.squeue import SymbolicQueue
 
 
-class RL(TimeIndexedStructure):
+class RateLimiter(TimeIndexedStructure):
     def eval(self, model: ModelRef):
         return self.out.eval(model)
 

@@ -1,14 +1,17 @@
-from typing import List, Tuple
+from typing import List
 
-from z3 import If, ExprRef, IntVal, Solver, Z3Exception, Or, And, ArithRef, BoolRef
-
-from symbolic.base import SymbolicStructure
+from z3 import If, ExprRef, IntVal, Or, And, ArithRef
 
 ZERO = IntVal(0)
+MAX_VAL = IntVal(99999)
 
 
 def min_expr(a: ExprRef, b: ExprRef) -> ExprRef:
     return If(a <= b, a, b)
+
+
+def max_expr(a: ExprRef, b: ExprRef) -> ExprRef:
+    return If(a <= b, b, a)
 
 
 def abs_expr(a: ArithRef) -> ArithRef:
