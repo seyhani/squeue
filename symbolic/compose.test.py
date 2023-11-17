@@ -1,40 +1,12 @@
 from typing import List
 
-from z3 import Solver, Or, IntVal, If, And, Xor, Int, Not, ArithRef
+from z3 import Or, IntVal, If, And, Xor, Not, ArithRef
 
 from symbolic.hist import SymbolicHistory
-from symbolic.rl import RL
+from symbolic.rl import RateLimiter
 from symbolic.rr import RoundRobinScheduler
 from symbolic.smt_solver import SmtSolver
-from symbolic.util import exists, forall, ZERO, abs_expr, memoize
-
-
-def ccount(hist: List[ArithRef], id: int, t: int):
-    res = IntVal(0)
-    for i in range(1, t):
-        res += If(hist[i] == id, 1, 0)
-    return res
-
-
-def cenq(hist: SymbolicHistory, t: int):
-    res = IntVal(0)
-    for i in range(1, t):
-        res += If(hist[i] > 0, 1, 0)
-    return res
-
-
-@memoize
-def zero_rank(hist: SymbolicHistory, t):
-    if t == 0:
-        return ZERO
-    return If(hist[t] == 0, zero_rank(hist, t - 1) + 1, ZERO)
-
-
-@memoize
-def aipg(hist: SymbolicHistory, t):
-    if t == 0:
-        return ZERO
-    return If(zero_rank(hist, t) == 0, zero_rank(hist, t - 1) + 1, 0)
+from symbolic.util import exists, forall, ZERO, memoize
 
 
 def test_rr_composition():
@@ -284,7 +256,7 @@ def test_rl():
     rr.run()
     s.add_struct(rr)
 
-    rl = RL("rl", T, qs, rr.out)
+    rl = RateLimiter("rl", T, qs, rr.out)
     rl.run()
     s.add_struct(rl)
 
