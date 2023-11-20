@@ -19,6 +19,9 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
             self.add_constr(t, gte(ZERO))
 
     def project(self, idx):
+        if not isinstance(idx, int) or idx <= 0:
+            raise RuntimeError("Projection operand must be an int > 0")
+
         class ProjectedHistory(SymbolicHistory):
             def __init__(self, name, total_time):
                 super().__init__(name, total_time)
@@ -30,7 +33,7 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
         return ProjectedHistory(self.name, self.total_time)
 
     @memoize
-    def ccount(self, t=None):
+    def cc(self, t=None):
         if t is None:
             t = self.last_t()
         res = IntVal(0)
@@ -47,22 +50,25 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
         return If(self[t] == 0, self.czero(t - 1) + 1, ZERO)
 
     @memoize
-    def max_gap(self, t=None):
+    def maxg(self, t=None):
         if t is None:
             t = self.last_t()
         if t == 0:
             return IntVal(-1)
-        return If(self.ccount(t) < 2, IntVal(-1),
-                  If(self[t] > 0, max_expr(self.czero(t - 1), self.max_gap(t - 1)), self.max_gap(t - 1)))
+        return If(self.cc(t) < 2, IntVal(-1),
+                  If(self[t] > 0, max_expr(self.czero(t - 1), self.maxg(t - 1)), self.maxg(t - 1)))
 
     @memoize
-    def min_gap(self, t=None):
+    def ming(self, t=None):
         if t is None:
             t = self.last_t()
         if t == 0:
             return MAX_VAL
-        return If(self.ccount(t) < 2, MAX_VAL,
-                  If(self[t] > 0, min_expr(self.czero(t - 1), self.min_gap(t - 1)), self.min_gap(t - 1)))
+        return If(self.cc(t) < 2, MAX_VAL,
+                  If(self[t] > 0, min_expr(self.czero(t - 1), self.ming(t - 1)), self.ming(t - 1)))
+
+    def __or__(self, i: int):
+        return self.project(i)
 
     def eval_to_str(self, model: ModelRef):
         return """
@@ -75,10 +81,10 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
         """.format(
             [t for t in range(self.total_time)],
             self.eval(model),
-            [model.eval(self.ccount(t)) for t in range(self.total_time)],
+            [model.eval(self.cc(t)) for t in range(self.total_time)],
             [model.eval(self.czero(t)) for t in range(self.total_time)],
-            [model.eval(self.min_gap(t)) for t in range(self.total_time)],
-            [model.eval(self.max_gap(t)) for t in range(self.total_time)],
+            [model.eval(self.ming(t)) for t in range(self.total_time)],
+            [model.eval(self.maxg(t)) for t in range(self.total_time)],
         )
 
 

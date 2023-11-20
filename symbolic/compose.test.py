@@ -2,7 +2,7 @@ from typing import List
 
 from z3 import Or, IntVal, If, And, Xor, Not, ArithRef
 
-from symbolic.hist import SymbolicHistory
+from symbolic.hist import SymbolicHistory, single_id_hist
 from symbolic.rl import RateLimiter
 from symbolic.rr import RoundRobinScheduler
 from symbolic.smt_solver import SmtSolver
@@ -14,19 +14,15 @@ def test_rr_composition():
     qs = 5
     s = SmtSolver()
 
-    h11 = SymbolicHistory("h11", T)
-    # s.add_struct(h11)
-    h12 = SymbolicHistory("h12", T)
-    # s.add_struct(h12)
-    rr1 = RoundRobinScheduler("rr1", T, qs, [h11, h12])
+    ha1 = single_id_hist("ha1", T, 1)
+    ha2 = single_id_hist("ha2", T, 2)
+    rr1 = RoundRobinScheduler("rr1", T, qs, [ha1, ha2])
     rr1.run()
     s.add_struct(rr1)
 
-    h21 = SymbolicHistory("h21", T)
-    # s.add_struct(h21)
-    h22 = SymbolicHistory("h22", T)
-    # s.add_struct(h22)
-    rr2 = RoundRobinScheduler("rr2", T, qs, [h21, h22])
+    hb1 = single_id_hist("hb1", T, 1)
+    hb2 = single_id_hist("hb2", T, 2)
+    rr2 = RoundRobinScheduler("rr2", T, qs, [hb1, hb2])
     rr2.run()
     s.add_struct(rr2)
 
@@ -34,29 +30,30 @@ def test_rr_composition():
     rro.run()
     s.add_struct(rro)
 
-    for t in range(1, T):
-        s.add_constr(Or(h11[t] == 0, h11[t] == 1))
-        s.add_constr(Or(h21[t] == 0, h21[t] == 1))
-        s.add_constr(Or(h12[t] == 0, h12[t] == 2))
-        s.add_constr(Or(h22[t] == 0, h22[t] == 2))
-        s.add_constr(Or(h11[t] > 0, h21[t] > 0))
-        s.add_constr(Or(h12[t] > 0, h22[t] > 0))
+    p = And(
+        forall(lambda t: ha1.cc(t) + hb1.cc(t) >= t, range(1, T)),
+        forall(lambda t: ha2.cc(t) + hb2.cc(t) >= t, range(1, T))
+    )
 
-    p1 = forall(lambda t: ccount(rr1.out, 1, t) >= ccount(rr1.out, 2, t), range(1, T))
-    p2 = forall(lambda t: ccount(rr2.out, 1, t) >= ccount(rr1.out, 2, t), range(1, T))
-    p3 = ccount(rr2.out, 2, T) <= 0
-    s.add_constrs([p1, p2, p3])
+    p1 = And(
+        forall(lambda t: (rr1.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
+        forall(lambda t: (rr2.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
+        (rr2.out | 2).cc() <= 0
+    )
 
-    q = exists(lambda t: ccount(rro.out, 1, t) - ccount(rro.out, 2, t) >= 4, range(1, T))
-    s.add_constr(q)
-    # s.add_constr(Not(q))
+    q = exists(lambda t: (rro.out | 1).cc(t) - (rro.out | 2).cc(t) >= 4, range(1, T))
+
+    s.add_constr(p)
+    s.add_constr(p1)
+    # s.add_constr(q)
+    s.add_constr(Not(q))
     # s.add_constr(exists(lambda t: rr.out[t] == 0, 3, T))
     # s.add_constr(Or([) for t in range(2, T)]))
     m = s.check_sat()
-    print("h11: ", h11.eval(m))
-    print("h12: ", h12.eval(m))
-    print("h21: ", h21.eval(m))
-    print("h22: ", h22.eval(m))
+    print("h11: ", ha1.eval(m))
+    print("h12: ", ha2.eval(m))
+    print("h21: ", hb1.eval(m))
+    print("h22: ", hb2.eval(m))
     print("rr1: ", rr1.out.eval(m))
     print("rr2: ", rr2.out.eval(m))
     print("rro: ", rro.out.eval(m))

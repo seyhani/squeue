@@ -103,13 +103,13 @@ def rr_test():
     h22 = IntArray("h22")
     rr = SmtRoundRobinScheduler(h11, h12, h21, h22)
     constrs = []
-    constrs.extend(for_all_t(lambda t: h11.ccount(t) + h12.ccount(t) > t))
-    constrs.extend(for_all_t(lambda t: h21.ccount(t) + h22.ccount(t) > t))
+    constrs.extend(for_all_t(lambda t: h11.cc(t) + h12.cc(t) > t))
+    constrs.extend(for_all_t(lambda t: h21.cc(t) + h22.cc(t) > t))
 
     query = []
 
-    h1_pkt_count = lambda t: rr.out.ccount(t, lambda p: p / 10 < 2)
-    h2_pkt_count = lambda t: rr.out.ccount(t, lambda p: p / 10 > 1)
+    h1_pkt_count = lambda t: rr.out.cc(t, lambda p: p / 10 < 2)
+    h2_pkt_count = lambda t: rr.out.cc(t, lambda p: p / 10 > 1)
 
     query.extend(exists_t(lambda t: h1_pkt_count(t) - h2_pkt_count(t) >= 4))
 

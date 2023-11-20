@@ -46,25 +46,25 @@ def rr_rl():
     out = rl.out
 
     p = And(
-        h1.max_gap() <= 2,
-        h1.ccount(1) >= 1,
-        h1.ccount() >= pc,
+        h1.maxg() <= 2,
+        h1.cc(1) >= 1,
+        h1.cc() >= pc,
         # forall(lambda t: h1[t] == 0, range(ht, T)),
-        h2.max_gap() <= 2,
-        h2.ccount(1) >= 1,
-        h2.ccount() >= pc,
+        h2.maxg() <= 2,
+        h2.cc(1) >= 1,
+        h2.cc() >= pc,
         # forall(lambda t: h2[t] == 0, range(ht, T)),
     )
 
     p1 = And(
         # forall(lambda t: Implies(And(rr.out[t - 1] > 0, rr.out[t] > 0), rr.out[t - 1] != rr.out[t]), range(1, T)),
-        rr.out.project(1).max_gap() == 1,
-        rr.out.project(1).min_gap() == 1,
-        rr.out.max_gap() <= 0
+        rr.out.project(1).maxg() == 1,
+        rr.out.project(1).ming() == 1,
+        rr.out.maxg() <= 0
     )
 
     q = And(
-        exists(lambda t: abs_expr(out.project(1).ccount(t) - out.project(2).ccount(t)) >= 4, range(T)),
+        exists(lambda t: abs_expr(out.project(1).cc(t) - out.project(2).cc(t)) >= 4, range(T)),
     )
 
     rr.run()
@@ -95,21 +95,21 @@ def rr():
     rr = RoundRobinScheduler("rr", T, 5, [h1, h2])
 
     p = And(
-        h1.max_gap() <= 1,
-        h1.ccount(1) >= 1,
-        h1.ccount() >= pc,
+        h1.maxg() <= 1,
+        h1.cc(1) >= 1,
+        h1.cc() >= pc,
         # forall(lambda t: h1[t] == 0, range(ht, T)),
-        h2.max_gap() <= 1,
-        h2.ccount(1) >= 1,
-        h2.ccount() >= pc,
+        h2.maxg() <= 1,
+        h2.cc(1) >= 1,
+        h2.cc() >= pc,
         # forall(lambda t: h2[t] == 0, range(ht, T)),
     )
 
     p1 = And(
         # forall(lambda t: Implies(And(rr.out[t - 1] > 0, rr.out[t] > 0), rr.out[t - 1] != rr.out[t]), range(1, T)),
-        rr.out.project(1).max_gap() == 1,
-        rr.out.project(1).min_gap() == 1,
-        rr.out.max_gap() <= 0
+        rr.out.project(1).maxg() == 1,
+        rr.out.project(1).ming() == 1,
+        rr.out.maxg() <= 0
     )
 
     rr.run()
