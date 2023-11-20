@@ -39,3 +39,6 @@ class TimeIndexedStructure(SymbolicStructure, ABC):
     def __init__(self, total_time, **kwargs):
         super().__init__(**kwargs)
         self.total_time = total_time
+
+    def last_t(self):
+        return self.total_time - 1

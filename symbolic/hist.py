@@ -1,10 +1,14 @@
 from typing import List
 
-from z3 import IntVal, If, Or, And
+from z3 import IntVal, If, Or, And, BoolRef, ModelRef
 
 from symbolic.arr import IntArray
 from symbolic.base import TimeIndexedStructure
 from symbolic.util import gte, ZERO, eq, memoize, max_expr, min_expr, MAX_VAL, forall
+
+
+def match_id(p, idx: int = -1) -> BoolRef:
+    return If(idx == -1, p > 0, p == idx)
 
 
 class SymbolicHistory(IntArray, TimeIndexedStructure):
@@ -14,25 +18,68 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
         for t in range(self.total_time):
             self.add_constr(t, gte(ZERO))
 
+    def project(self, idx):
+        class ProjectedHistory(SymbolicHistory):
+            def __init__(self, name, total_time):
+                super().__init__(name, total_time)
+
+            def __getitem__(self, t):
+                val = super(ProjectedHistory, self).__getitem__(t)
+                return If(val == IntVal(idx), val, ZERO)
+
+        return ProjectedHistory(self.name, self.total_time)
+
     @memoize
-    def ccount(self, t: int, id: int = 0):
+    def ccount(self, t=None):
+        if t is None:
+            t = self.last_t()
         res = IntVal(0)
-        for i in range(1, t):
-            res += If(If(id == 0, self[i] > 0, self[i] == id), 1, 0)
+        for i in range(1, t + 1):
+            res += If(self[i] > 0, 1, 0)
         return res
 
     @memoize
-    def czero(self, t):
+    def czero(self, t=None):
+        if t is None:
+            t = self.last_t()
         if t == 0:
             return ZERO
         return If(self[t] == 0, self.czero(t - 1) + 1, ZERO)
 
     @memoize
-    def min_gap(self, t):
+    def max_gap(self, t=None):
+        if t is None:
+            t = self.last_t()
+        if t == 0:
+            return IntVal(-1)
+        return If(self.ccount(t) < 2, IntVal(-1),
+                  If(self[t] > 0, max_expr(self.czero(t - 1), self.max_gap(t - 1)), self.max_gap(t - 1)))
+
+    @memoize
+    def min_gap(self, t=None):
+        if t is None:
+            t = self.last_t()
         if t == 0:
             return MAX_VAL
         return If(self.ccount(t) < 2, MAX_VAL,
                   If(self[t] > 0, min_expr(self.czero(t - 1), self.min_gap(t - 1)), self.min_gap(t - 1)))
+
+    def eval_to_str(self, model: ModelRef):
+        return """
+        \r      \t {}
+        \r hist:\t {}
+        \r   cc:\t {}
+        \r   cz:\t {}
+        \r ming:\t {}
+        \r maxg:\t {}
+        """.format(
+            [t for t in range(self.total_time)],
+            self.eval(model),
+            [model.eval(self.ccount(t)) for t in range(self.total_time)],
+            [model.eval(self.czero(t)) for t in range(self.total_time)],
+            [model.eval(self.min_gap(t)) for t in range(self.total_time)],
+            [model.eval(self.max_gap(t)) for t in range(self.total_time)],
+        )
 
 
 def create_hist(name: str, ints: List[int], total_time=-1):

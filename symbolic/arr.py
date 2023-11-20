@@ -26,7 +26,7 @@ class SymbolicArray(SymbolicStructure):
         return self.__constrs
 
     def eval(self, model: ModelRef):
-        return [model.eval(self.arr[t]) for t in range(self.size)]
+        return [model.eval(self[t]) for t in range(self.size)]
 
 
 class BoolArray(SymbolicArray):
