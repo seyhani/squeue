@@ -1,37 +1,61 @@
 from typing import List
 
-from z3 import If, Implies, And, ModelRef, ExprRef, IntVal, ArithRef, BoolRef
+from z3 import If, Implies, And, ModelRef, IntVal, ArithRef
 
-from symbolic.arr import IntArray, BoolArray
-from symbolic.base import TimeIndexedStructure
+from symbolic.arr import IntArray
+from symbolic.base import TimeIndexedStructure, LabeledExpr
 from symbolic.hist import SymbolicHistory
 from symbolic.squeue import SymbolicQueue
-from symbolic.util import eq, gte, lte, ZERO
+from symbolic.util import ZERO
 
 
 class RoundRobinScheduler(TimeIndexedStructure):
     in_queue_size: int
     queues: List[SymbolicQueue]
     out: SymbolicHistory
-    empty: List[BoolArray]
+    empty: List[IntArray]
     served: IntArray
-    __constrs: List[ExprRef]
 
-    def __init__(self, name: str, total_time: int, in_queue_size: int, hists: List[IntArray]):
+    def __init__(self, name: str, total_time: int, in_queue_size: int, hists: List[SymbolicHistory]):
         super().__init__(name=name, total_time=total_time)
-        self.__constrs = []
         self.in_queue_size = in_queue_size
-        self.queues = [SymbolicQueue("{}_q_{}".format(name, i), in_queue_size, h) for i, h in enumerate(hists)]
-        self.out = SymbolicHistory(name="{}_qo".format(name), total_time=self.total_time)
-        self.served = IntArray(name="{}_served".format(name), size=self.total_time)
+        self.queues = [SymbolicQueue("{}::q_{}".format(name, i), in_queue_size, h) for i, h in enumerate(hists)]
+        self.out = SymbolicHistory(name="{}::out".format(name), total_time=self.total_time)
+        self.served = IntArray(name="{}::served".format(name), size=self.total_time)
         self.empty = []
+        self.setup_empties()
+        self.add_served_constrs()
+
+    def setup_empties(self):
         for t in range(self.total_time):
-            empty = BoolArray("{}_empty[{}]".format(name, t), len(self.queues))
+            empty = IntArray(name="{}::empty_{}".format(self.name, t), size=len(self.queues))
             for i in range(len(self.queues)):
-                empty.add_constr(i, eq((self.queues[i].blog(t) == 0)))
+                empty.add_constr(LabeledExpr(
+                    empty[i] == If(self.queues[i].blog(t) == 0, 1, 0),
+                    "{0}::empty_{1}[{2}] = {3} <=> q_{1}::blog({2}) = {4}".format(self.name, i, t, 1, 0)
+                ))
             self.empty.append(empty)
 
-    def constrs(self) -> List[ExprRef]:
+    def add_served_constrs(self):
+        self.served.add_constr(LabeledExpr(
+            self.served[0] == IntVal(len(self.queues) - 1),
+            "{0}::served[{1}] = {2}".format(self.name, 0, len(self.queues) - 1)
+        ))
+        for t in range(self.total_time):
+            self.served.add_constr(
+                LabeledExpr(
+                    self.served[t] >= -1,
+                    "{0}::served[{1}] >= {2}".format(self.name, t, -1)
+                )
+            )
+            self.served.add_constr(
+                LabeledExpr(
+                    self.served[t] <= len(self.queues),
+                    "{0}::served[{1}] <= {2}".format(self.name, t, len(self.queues))
+                )
+            )
+
+    def constrs(self) -> List[LabeledExpr]:
         constrs = []
         constrs.extend(self.out.constrs())
         constrs.extend(self.served.constrs())
@@ -39,7 +63,7 @@ class RoundRobinScheduler(TimeIndexedStructure):
             constrs.extend(queue.constrs())
         for e in self.empty:
             constrs.extend(e.constrs())
-        constrs.extend(self.__constrs)
+        constrs.extend(self.scheduling_constrs())
         return constrs
 
     def candidate(self, t) -> ArithRef:
@@ -50,11 +74,14 @@ class RoundRobinScheduler(TimeIndexedStructure):
             return self.served[0]
         return If(self.served[t] >= 0, self.served[t], self.last_served(t - 1))
 
-    def all_empty(self, t) -> BoolRef:
-        return And([self.empty[t][i] for i in range(self.empty[t].size)])
+    def all_empty(self, t) -> ArithRef:
+        return And([self.empty[t][i] == 1 for i in range(self.empty[t].size)])
 
-    def pick_queue(self, t):
-        constrs = [Implies(self.all_empty(t), self.served[t] == -1)]
+    def queue_select_constrs(self, t) -> List[LabeledExpr]:
+        constrs = [LabeledExpr(
+            Implies(self.all_empty(t), self.served[t] == -1),
+            "{0}:: all_empty({1}) => served[{1}] = {2}".format(self.name, t, -1)
+        )]
         for i in range(len(self.queues)):
             cidx = self.candidate(t - 1)
             ands = []
@@ -63,31 +90,46 @@ class RoundRobinScheduler(TimeIndexedStructure):
                 ands.append(self.empty[t][idx] == True)
             idx = (cidx + i) % len(self.queues)
             constr = And(*ands, self.empty[t][idx] == False)
-            constrs.append(Implies(constr, self.served[t] == idx))
-        self.__constrs.extend(constrs)
+            constrs.append(
+                LabeledExpr(
+                    Implies(constr, self.served[t] == idx),
+                    "{0}:: prevs_empty({1}) & not_empty({1}) => served[{2}] == {1}".format(self.name, idx, t)
+                )
+            )
+        return constrs
 
-    def push_out(self, t):
-        constrs = []
-        constrs.append(Implies(self.served[t] == IntVal(-1), self.out[t] == ZERO))
+    def push_out_constrs(self, t) -> List[LabeledExpr]:
+        constrs = [LabeledExpr(
+            Implies(self.served[t] == IntVal(-1), self.out[t] == ZERO),
+            "{0}:: served[{1}] = {2} => out[{1}] = {3}".format(self.name, t, -1, 0)
+        )]
         for i in range(len(self.queues)):
-            constrs.append(Implies(self.served[t] == IntVal(i), self.out[t] == self.queues[i].head_pkt(t)))
-        self.__constrs.extend(constrs)
+            constrs.append(
+                LabeledExpr(
+                    Implies(self.served[t] == IntVal(i), self.out[t] == self.queues[i].head_pkt(t)),
+                    "{0}:: served[{1}] = {2} => out[{1}] = q_{2}::head_pkt({1})".format(self.name, t, i)
+                )
+            )
+        return constrs
 
-    def dequeue(self, t):
+    def dequeue_constrs(self, t) -> List[LabeledExpr]:
         constrs = []
         for i, q in enumerate(self.queues):
-            constrs.append(If(self.served[t] == IntVal(i), q.deqs[t] == 1, q.deqs[t] == 0))
-        self.__constrs.extend(constrs)
+            constrs.append(
+                LabeledExpr(
+                    If(self.served[t] == IntVal(i), q.deqs[t] == 1, q.deqs[t] == 0),
+                    "{0}:: q_{1}::deqs[{2}] == {3} <=> served[{2}] == {1}".format(self.name, t, i, 1)
+                )
+            )
+        return constrs
 
-    def run(self):
-        self.served.add_constr(0, eq(IntVal(len(self.queues) - 1)))
-        for t in range(self.total_time):
-            self.served.add_constr(t, gte(IntVal(-1)))
-            self.served.add_constr(t, lte(IntVal(len(self.queues))))
+    def scheduling_constrs(self):
+        constrs = []
         for t in range(1, self.total_time):
-            self.pick_queue(t)
-            self.push_out(t)
-            self.dequeue(t)
+            constrs.extend(self.queue_select_constrs(t))
+            constrs.extend(self.push_out_constrs(t))
+            constrs.extend(self.dequeue_constrs(t))
+        return constrs
 
     def eval(self, model: ModelRef):
         return self.out.eval(model)

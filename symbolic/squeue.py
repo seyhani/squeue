@@ -16,12 +16,12 @@ class SymbolicQueue(TimeIndexedStructure):
         super().__init__(name=name, total_time=hist.size)
         self.size = size
         self.hist = hist
-        self.deqs = IntArray(name="{}_deqs".format(name), size=self.total_time)
-        self.deqs.add_constr(LabeledExpr(self.deqs[0] == 0, "{}_deqs[{}] == {}".format(self.name, 0, 0)))
+        self.deqs = IntArray(name="{}::deqs".format(name), size=self.total_time)
+        self.deqs.add_constr(LabeledExpr(self.deqs[0] == 0, "{}::deqs[{}] == {}".format(self.name, 0, 0)))
         for t in range(self.total_time):
-            self.deqs.add_constr(LabeledExpr(self.deqs[t] >= 0, "{}_deqs[{}] >= {}".format(self.name, t, 0)))
+            self.deqs.add_constr(LabeledExpr(self.deqs[t] >= 0, "{}::deqs[{}] >= {}".format(self.name, t, 0)))
             self.deqs.add_constr(
-                LabeledExpr(self.deqs[t] <= self.blog(t), "{0}_deqs[{1}] <= blog[{1}]".format(self.name, t)))
+                LabeledExpr(self.deqs[t] <= self.blog(t), "{0}::deqs[{1}] <= blog({1})".format(self.name, t)))
 
     def constrs(self) -> List[LabeledExpr]:
         constrs = []
@@ -34,7 +34,7 @@ class SymbolicQueue(TimeIndexedStructure):
             val = 0
             if t in deqs_dict:
                 val = deqs_dict[t]
-            self.deqs.add_constr(LabeledExpr(self.deqs[t] == val, "{}_deqs[{}] = {}".format(self.name, t, val)))
+            self.deqs.add_constr(LabeledExpr(self.deqs[t] == val, "{}::deqs[{}] = {}".format(self.name, t, val)))
 
     def eval(self, model: ModelRef):
         concrete_queue = [[]]

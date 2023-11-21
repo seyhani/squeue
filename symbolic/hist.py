@@ -105,6 +105,6 @@ def single_id_hist(name: str, total_time: int, idx: int):
 
 def non_trivial_hist(name: str, total_time: int, idx: int):
     hist = single_id_hist(name, total_time, idx)
-    hist.add_constr(LabeledExpr(hist.cc(1) > 0, "{}.cc({}) > {}".format(hist.name, 1, 0)))
-    hist.add_constr(LabeledExpr(hist.cc() > 1, "{}.cc() > {}".format(hist.name, 1)))
+    hist.add_constr(LabeledExpr(hist.cc(1) > 0, "{}::cc({}) > {}".format(hist.name, 1, 0)))
+    hist.add_constr(LabeledExpr(hist.cc() > 1, "{}::cc() > {}".format(hist.name, 1)))
     return hist
