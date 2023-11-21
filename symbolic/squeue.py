@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 from z3 import If, IntVal, Or, ModelRef, ArithRef, And
 
@@ -28,6 +28,13 @@ class SymbolicQueue(TimeIndexedStructure):
         constrs.extend(self.hist.constrs())
         constrs.extend(self.deqs.constrs())
         return constrs
+
+    def set_dequeues(self, deqs_dict: Dict[int, int]):
+        for t in range(self.total_time):
+            val = 0
+            if t in deqs_dict:
+                val = deqs_dict[t]
+            self.deqs.add_constr(LabeledExpr(self.deqs[t] == val, "{}_deqs[{}] = {}".format(self.name, t, val)))
 
     def eval(self, model: ModelRef):
         concrete_queue = [[]]
