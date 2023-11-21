@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Callable
 
-from z3 import ExprRef, ModelRef
+from z3 import ExprRef, ModelRef, ArithRef
 
 
 @dataclass
@@ -39,3 +38,6 @@ class TimeIndexedStructure(SymbolicStructure, ABC):
 
     def last_t(self):
         return self.total_time - 1
+
+    def eval_timed_metric(self, metric: Callable[[int], ArithRef], m: ModelRef) -> List[int]:
+        return [m.eval(metric(t)) for t in range(self.total_time)]

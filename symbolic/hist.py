@@ -1,18 +1,18 @@
 from typing import List
 
-from z3 import IntVal, If, Or, And, BoolRef, ModelRef
+from z3 import IntVal, If, Or, ModelRef
 
 from symbolic.arr import IntArray
-from symbolic.base import TimeIndexedStructure
-from symbolic.util import gte, ZERO, eq, memoize, max_expr, min_expr, MAX_VAL, forall
+from symbolic.base import TimeIndexedStructure, LabeledExpr
+from symbolic.util import ZERO, memoize, max_expr, min_expr, MAX_VAL
 
 
 class SymbolicHistory(IntArray, TimeIndexedStructure):
     def __init__(self, name, total_time):
         super().__init__(name=name, total_time=total_time, size=total_time)
-        self.add_constr(0, eq(ZERO))
+        self.add_constr(LabeledExpr(self[0] == 0, "{}[{}] == {}".format(self.name, 0, 0)))
         for t in range(self.total_time):
-            self.add_constr(t, gte(ZERO))
+            self.add_constr(LabeledExpr(self[t] >= ZERO, "{}[{}] >= {}".format(self.name, t, 0)))
 
     def project(self, idx):
         if not isinstance(idx, int) or idx <= 0:
@@ -77,34 +77,34 @@ class SymbolicHistory(IntArray, TimeIndexedStructure):
         """.format(
             [t for t in range(self.total_time)],
             self.eval(model),
-            [model.eval(self.cc(t)) for t in range(self.total_time)],
-            [model.eval(self.czero(t)) for t in range(self.total_time)],
-            [model.eval(self.ming(t)) for t in range(self.total_time)],
-            [model.eval(self.maxg(t)) for t in range(self.total_time)],
+            self.eval_timed_metric(self.cc, model),
+            self.eval_timed_metric(self.czero, model),
+            self.eval_timed_metric(self.ming, model),
+            self.eval_timed_metric(self.maxg, model)
         )
 
 
-def create_hist(name: str, ints: List[int], total_time=-1):
-    if total_time == -1:
+def create_hist(name: str, ints: List[int], total_time=None):
+    if total_time is None:
         total_time = len(ints)
     hist = SymbolicHistory(name=name, total_time=total_time)
     for t in range(1, total_time):
         v = 0
         if t <= len(ints):
             v = IntVal(ints[t - 1])
-        hist.add_constr(t, eq(v))
+        hist.add_constr(LabeledExpr(hist[t] == v, "{}[{}] = {}".format(hist.name, t, v)))
     return hist
 
 
 def single_id_hist(name: str, total_time: int, idx: int):
-    h = SymbolicHistory(name, total_time)
+    hist = SymbolicHistory(name, total_time)
     for t in range(total_time):
-        h.add_constr(t, lambda ht: Or(ht == 0, ht == idx))
-    return h
+        hist.add_constr(LabeledExpr(Or(hist[t] == 0, hist[t] == idx), "{}[{}] = {}|{}".format(hist.name, t, 0, idx)))
+    return hist
 
 
 def non_trivial_hist(name: str, total_time: int, idx: int):
-    h = single_id_hist(name, total_time, idx)
-    h.add_constr_expr(h.cc(1) > 0)
-    h.add_constr_expr(h.cc() > 1)
-    return h
+    hist = single_id_hist(name, total_time, idx)
+    hist.add_constr(LabeledExpr(hist.cc(1) > 0, "{}.cc({}) > {}".format(hist.name, 1, 0)))
+    hist.add_constr(LabeledExpr(hist.cc() > 1, "{}.cc() > {}".format(hist.name, 1)))
+    return hist
