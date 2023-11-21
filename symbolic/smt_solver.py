@@ -39,6 +39,8 @@ class SmtSolver:
 
     def add_constrs(self, constrs: List[LabeledExpr]):
         for constr in constrs:
+            if not isinstance(constr, LabeledExpr):
+                raise RuntimeError("Constraint must be labeled: " + str(constr))
             self.add_constr(constr.expr, constr.label)
 
     def for_all(self, constr_producer, time_range):
