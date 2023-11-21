@@ -1,5 +1,5 @@
 from symbolic.hist import SymbolicHistory
-from symbolic.rr import RoundRobinScheduler
+from schedulers.rr import RoundRobinScheduler
 from symbolic.test_util import instantiate
 
 

@@ -3,6 +3,7 @@ from typing import Dict, List
 from z3 import Solver, ExprRef, sat, unsat, ModelRef
 
 from symbolic.base import SymbolicStructure, LabeledExpr
+from utils.logger import Logger
 
 RANDOM_SEED = 100
 
@@ -28,6 +29,11 @@ class SmtSolver:
     def add_constr(self, expr: ExprRef, label: str = None):
         if label is None:
             label = str(expr)
+            Logger.warn("Using implicit label for constr: {}".format(str(expr)))
+
+        if label in self.constrs:
+            Logger.warn("Duplicate constraint label: {}".format(label))
+
         self.constrs[label] = expr
         self.solver.assert_and_track(expr, label)
 

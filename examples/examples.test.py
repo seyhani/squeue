@@ -1,8 +1,8 @@
 from z3 import And, Not
 
 from symbolic.hist import single_id_hist
-from symbolic.rl import RateLimiter
-from symbolic.rr import RoundRobinScheduler
+from schedulers.rl import RateLimiter
+from schedulers.rr import RoundRobinScheduler
 from symbolic.smt_solver import SmtSolver
 from symbolic.util import abs_expr
 from symbolic.util import exists, forall

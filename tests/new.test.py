@@ -1,9 +1,9 @@
-from z3 import And, Not, Int
+from z3 import And, Not
 
-from symbolic.hist import single_id_hist, non_trivial_hist
-from symbolic.rr import RoundRobinScheduler
+from symbolic.hist import non_trivial_hist
+from schedulers.rr import RoundRobinScheduler
 from symbolic.smt_solver import SmtSolver
-from symbolic.util import forall, max_expr, min_expr
+from symbolic.util import max_expr
 
 
 def test():
