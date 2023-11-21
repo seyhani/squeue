@@ -100,8 +100,15 @@ def create_hist(name: str, ints: List[int], total_time=-1):
     return hist
 
 
-def single_id_hist(name: str, total_time: int, id: int):
+def single_id_hist(name: str, total_time: int, idx: int):
     h = SymbolicHistory(name, total_time)
     for t in range(total_time):
-        h.add_constr(t, lambda ht: Or(ht == 0, ht == id))
+        h.add_constr(t, lambda ht: Or(ht == 0, ht == idx))
+    return h
+
+
+def non_trivial_hist(name: str, total_time: int, idx: int):
+    h = single_id_hist(name, total_time, idx)
+    h.add_constr_expr(h.cc(1) > 0)
+    h.add_constr_expr(h.cc() > 1)
     return h

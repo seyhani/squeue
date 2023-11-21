@@ -13,17 +13,16 @@ class SmtSolver:
     solver: Solver
     structs: Dict[str, SymbolicStructure]
 
-    def __init__(self):
+    def __init__(self, seed=RANDOM_SEED):
         solver = Solver()
         solver.set('smt.arith.random_initial_value', True)
-        solver.set('random_seed', RANDOM_SEED)
+        solver.set('random_seed', seed)
         solver.set(unsat_core=True)
         self.solver = solver
         self.structs = {}
 
     def add_struct(self, struct: SymbolicStructure):
-        for c in struct.constrs():
-            self.add_constr(c)
+        self.add_constrs(struct.constrs())
         self.structs[struct.name] = struct
 
     def add_constr(self, constr: ExprRef):

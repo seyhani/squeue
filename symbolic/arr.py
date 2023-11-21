@@ -22,6 +22,9 @@ class SymbolicArray(SymbolicStructure):
     def add_constr(self, i: int, expr_producer: Callable[[ArrayRef], ExprRef]):
         self.__constrs.append(expr_producer(self[i]))
 
+    def add_constr_expr(self, expr: ExprRef):
+        self.__constrs.append(expr)
+
     def constrs(self) -> List[ExprRef]:
         return self.__constrs
 
