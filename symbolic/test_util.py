@@ -1,18 +1,21 @@
+from typing import List
+
 from z3 import Solver, sat, unsat
 
-from symbolic.base import SymbolicStructure
+from symbolic.base import SymbolicStructure, LabeledExpr
+from symbolic.smt_solver import SmtSolver
 
 
-def instantiate(struct: SymbolicStructure, *constrs):
-    s = Solver()
-    s.add(constrs)
-    s.add(struct.constrs())
-    assert s.check() == sat, "{} is not SAT!".format(struct.name)
-    m = s.model()
-    return struct.eval(m), struct.eval_to_str(m)
+def instantiate(struct: SymbolicStructure, constrs: List[LabeledExpr] = []):
+    s = SmtSolver()
+    s.add_struct(struct)
+    s.add_constrs(constrs)
+    m = s.check_sat()
+    return struct.eval(m)
 
 
 def assert_unsat(struct: SymbolicStructure):
-    s = Solver()
-    s.add(struct.constrs())
-    assert s.check() == unsat
+    s = SmtSolver()
+    s.add_struct(struct)
+    return s.check_unsat()
+

@@ -7,10 +7,6 @@ from symbolic.base import TimeIndexedStructure
 from symbolic.util import gte, ZERO, eq, memoize, max_expr, min_expr, MAX_VAL, forall
 
 
-def match_id(p, idx: int = -1) -> BoolRef:
-    return If(idx == -1, p > 0, p == idx)
-
-
 class SymbolicHistory(IntArray, TimeIndexedStructure):
     def __init__(self, name, total_time):
         super().__init__(name=name, total_time=total_time, size=total_time)

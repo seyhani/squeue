@@ -1,14 +1,13 @@
-from typing import List, Callable
+from typing import List
 
-from z3 import Array, IntSort, ModelRef, ExprRef, IntVal, ArrayRef, BoolSort, ArithRef
+from z3 import Array, IntSort, ModelRef, ArithRef
 
-from symbolic.base import SymbolicStructure
-from symbolic.util import eq
+from symbolic.base import SymbolicStructure, LabeledExpr
 
 
 class SymbolicArray(SymbolicStructure):
     size: int
-    __constrs: List[ExprRef]
+    __constrs: List[LabeledExpr]
 
     def __init__(self, name, size, sort, **kwargs):
         super().__init__(name=name, **kwargs)
@@ -19,30 +18,21 @@ class SymbolicArray(SymbolicStructure):
     def __getitem__(self, i: int) -> ArithRef:
         return self.arr[i]
 
-    def add_constr(self, i: int, expr_producer: Callable[[ArrayRef], ExprRef]):
-        self.__constrs.append(expr_producer(self[i]))
+    def add_constr(self, constr: LabeledExpr):
+        self.__constrs.append(constr)
 
-    def add_constr_expr(self, expr: ExprRef):
-        self.__constrs.append(expr)
-
-    def constrs(self) -> List[ExprRef]:
+    def constrs(self) -> List[LabeledExpr]:
         return self.__constrs
 
-    def eval(self, model: ModelRef):
+    def eval(self, model: ModelRef) -> List:
         return [model.eval(self[t]) for t in range(self.size)]
 
 
-class BoolArray(SymbolicArray):
-    def __init__(self, name, size):
-        super().__init__(name, size, BoolSort())
-
-    def eval(self, model: ModelRef) -> List[bool]:
-        return super().eval(model)
-
-
 class IntArray(SymbolicArray):
-    def __init__(self, **kwargs):
+    def __init__(self, vals: List[int] = [], **kwargs):
         super().__init__(sort=IntSort(), **kwargs)
+        for i, v in enumerate(vals):
+            self.add_constr(LabeledExpr(self[i] == v, "{}[{}] = {}".format(self.name, i, v)))
 
     def eval(self, model: ModelRef) -> List[int]:
         return super().eval(model)

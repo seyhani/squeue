@@ -1,17 +1,16 @@
-from typing import Callable, Dict, List
+from typing import Dict, List
 
-from z3 import Solver, Z3Exception, ExprRef, sat, unsat, ArrayRef, Model, ModelRef
+from z3 import Solver, ExprRef, sat, unsat, ModelRef
 
-from symbolic.base import SymbolicStructure, Time, TimeRange, LabeledConstraint
+from symbolic.base import SymbolicStructure, LabeledExpr
 
 RANDOM_SEED = 100
-
-TimedExprProducer = Callable[[Time], ExprRef]
 
 
 class SmtSolver:
     solver: Solver
     structs: Dict[str, SymbolicStructure]
+    constrs: Dict[str, ExprRef]
 
     def __init__(self, seed=RANDOM_SEED):
         solver = Solver()
@@ -20,24 +19,23 @@ class SmtSolver:
         solver.set(unsat_core=True)
         self.solver = solver
         self.structs = {}
+        self.constrs = {}
 
     def add_struct(self, struct: SymbolicStructure):
         self.add_constrs(struct.constrs())
         self.structs[struct.name] = struct
 
-    def add_constr(self, constr: ExprRef):
-        self.solver.add(constr)
+    def add_constr(self, expr: ExprRef, label: str = None):
+        if label is None:
+            label = str(expr)
+        self.constrs[label] = expr
+        self.solver.assert_and_track(expr, label)
 
-    def add_constrs(self, constrs: [ExprRef]):
+    def add_constrs(self, constrs: List[LabeledExpr]):
         for constr in constrs:
-            self.add_constr(constr)
-        # try:
-        #     self.solver.assert_and_track(constr.expr, constr.label)
-        # except Z3Exception as e:
-        #     print("Failed to add constraint: {}".format(constr.label))
-        #     print(e)
+            self.add_constr(constr.expr, constr.label)
 
-    def for_all(self, constr_producer: TimedExprProducer, time_range: TimeRange):
+    def for_all(self, constr_producer, time_range):
         for t in range(time_range[0], time_range[1]):
             constr = constr_producer(t)
             self.add_constr(constr)

@@ -1,16 +1,13 @@
 from abc import ABC, abstractmethod
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import List, Tuple
 
 from z3 import ExprRef, ModelRef
 
-Time = int
-
-TimeRange = Tuple[Time, Time]
-
 
 @dataclass
-class LabeledConstraint:
+class LabeledExpr:
     expr: ExprRef
     label: str
 
@@ -22,7 +19,7 @@ class SymbolicStructure(ABC):
         self.name = name
 
     @abstractmethod
-    def constrs(self) -> List[ExprRef]:
+    def constrs(self) -> List[LabeledExpr]:
         pass
 
     @abstractmethod
