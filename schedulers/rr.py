@@ -93,7 +93,8 @@ class RoundRobinScheduler(TimeIndexedStructure):
             constrs.append(
                 LabeledExpr(
                     Implies(constr, self.served[t] == idx),
-                    "{0}:: prevs_empty({1}) & not_empty({1}) => served[{2}] == {1}".format(self.name, idx, t)
+                    # TODO: Label is not correct
+                    "{0}:: prevs_empty({1}) & not_empty({1}) => served[{2}] == {1}".format(self.name, i, t)
                 )
             )
         return constrs
