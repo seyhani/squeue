@@ -4,11 +4,19 @@ from typing import List, Callable
 
 from z3 import ExprRef, ModelRef, ArithRef
 
+from utils.logger import Logger
 
-@dataclass
+
 class LabeledExpr:
     expr: ExprRef
     label: str
+
+    def __init__(self, expr: ExprRef, label: str = None):
+        self.expr = expr
+        if label is None:
+            label = str(expr)
+            Logger.warn("Using implicit label for constr: {}".format(str(expr)))
+        self.label = label
 
 
 class SymbolicStructure(ABC):

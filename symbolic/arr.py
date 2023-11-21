@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from z3 import Array, IntSort, ModelRef, ArithRef
 
@@ -15,7 +15,7 @@ class SymbolicArray(SymbolicStructure):
         self.arr = Array(name, IntSort(), sort)
         self.__constrs = []
 
-    def __getitem__(self, i: int) -> ArithRef:
+    def __getitem__(self, i: Union[ArithRef, int]) -> ArithRef:
         return self.arr[i]
 
     def add_constr(self, constr: LabeledExpr):
@@ -29,10 +29,11 @@ class SymbolicArray(SymbolicStructure):
 
 
 class IntArray(SymbolicArray):
-    def __init__(self, vals: List[int] = [], **kwargs):
+    def __init__(self, vals: List[int] = None, **kwargs):
         super().__init__(sort=IntSort(), **kwargs)
-        for i, v in enumerate(vals):
-            self.add_constr(LabeledExpr(self[i] == v, "{}[{}] = {}".format(self.name, i, v)))
+        if vals is not None:
+            for i, v in enumerate(vals):
+                self.add_constr(LabeledExpr(self[i] == v, "{}[{}] = {}".format(self.name, i, v)))
 
     def eval(self, model: ModelRef) -> List[int]:
         return super().eval(model)

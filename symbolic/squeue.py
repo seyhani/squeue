@@ -1,31 +1,30 @@
 from typing import List
 
-from z3 import If, IntVal, Or, ModelRef, ExprRef, ArithRef, ArrayRef, BoolRef, And
+from z3 import If, IntVal, Or, ModelRef, ArithRef, And
 
 from symbolic.arr import IntArray
-from symbolic.base import SymbolicStructure, TimeIndexedStructure
-from symbolic.util import min_expr, memoize, eq, gte, ZERO, lte
+from symbolic.base import TimeIndexedStructure, LabeledExpr
+from symbolic.hist import SymbolicHistory
+from symbolic.util import min_expr, memoize, ZERO
 
 
 class SymbolicQueue(TimeIndexedStructure):
-    hist: IntArray
+    hist: SymbolicHistory
     deqs: IntArray
 
-    def __init__(self, name: str, size: int, hist: IntArray):
+    def __init__(self, name: str, size: int, hist: SymbolicHistory):
         super().__init__(name=name, total_time=hist.size)
         self.size = size
         self.hist = hist
-        self.deq_constrs = {}
         self.deqs = IntArray(name="{}_deqs".format(name), size=self.total_time)
-        self.deqs.add_constr(0, eq(ZERO))
+        self.deqs.add_constr(LabeledExpr(self.deqs[0] == 0, "{}_deqs[{}] == {}".format(self.name, 0, 0)))
         for t in range(self.total_time):
-            self.deqs.add_constr(t, gte(ZERO))
-        for t in range(self.total_time):
-            self.deqs.add_constr(t, lte(self.blog(t)))
+            self.deqs.add_constr(LabeledExpr(self.deqs[t] >= 0, "{}_deqs[{}] >= {}".format(self.name, t, 0)))
+            self.deqs.add_constr(
+                LabeledExpr(self.deqs[t] <= self.blog(t), "{0}_deqs[{1}] <= blog[{1}]".format(self.name, t)))
 
-    def constrs(self) -> List[ExprRef]:
+    def constrs(self) -> List[LabeledExpr]:
         constrs = []
-        constrs.extend(self.deq_constrs.values())
         constrs.extend(self.hist.constrs())
         constrs.extend(self.deqs.constrs())
         return constrs
@@ -40,7 +39,7 @@ class SymbolicQueue(TimeIndexedStructure):
             concrete_queue.append(elems)
         return concrete_queue
 
-    def arr(self, t) -> ExprRef:
+    def arr(self, t) -> ArithRef:
         return If(self.hist[t] > ZERO, 1, 0)
 
     @memoize
@@ -54,7 +53,7 @@ class SymbolicQueue(TimeIndexedStructure):
         return self.size - (self.blog(t) - self.deqs[t])
 
     @memoize
-    def enq(self, t) -> ExprRef:
+    def enq(self, t) -> ArithRef:
         return min_expr(self.arr(t), self.cap(t))
 
     @memoize
@@ -92,11 +91,8 @@ class SymbolicQueue(TimeIndexedStructure):
         return If(And(self.arr(t) == 1, self.enq(t) == 0), 1, 0)
 
     @memoize
-    def head_pkt(self, t) -> ArrayRef:
+    def head_pkt(self, t) -> ArithRef:
         return self.hist[self.head(t)]
-
-    def __for_all_t(self, f, model):
-        return [model.eval(f(t)) for t in range(self.total_time)]
 
     def eval_to_str(self, model: ModelRef):
         return """
@@ -114,13 +110,13 @@ class SymbolicQueue(TimeIndexedStructure):
         """.format(
             [t for t in range(self.total_time)],
             self.hist.eval(model),
-            self.__for_all_t(self.drop, model),
-            self.__for_all_t(self.arr, model),
-            self.__for_all_t(self.cap, model),
+            self.eval_timed_metric(self.drop, model),
+            self.eval_timed_metric(self.arr, model),
+            self.eval_timed_metric(self.cap, model),
             self.deqs.eval(model),
-            self.__for_all_t(self.enq, model),
-            self.__for_all_t(self.cenq, model),
-            self.__for_all_t(self.cdeq, model),
-            self.__for_all_t(self.blog, model),
-            self.__for_all_t(self.head, model)
+            self.eval_timed_metric(self.enq, model),
+            self.eval_timed_metric(self.cenq, model),
+            self.eval_timed_metric(self.cdeq, model),
+            self.eval_timed_metric(self.blog, model),
+            self.eval_timed_metric(self.head, model)
         )

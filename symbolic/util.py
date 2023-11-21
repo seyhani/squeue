@@ -6,11 +6,11 @@ ZERO = IntVal(0)
 MAX_VAL = IntVal(99999)
 
 
-def min_expr(a: ExprRef, b: ExprRef) -> ExprRef:
+def min_expr(a: ArithRef, b: ArithRef) -> ArithRef:
     return If(a <= b, a, b)
 
 
-def max_expr(a: ExprRef, b: ExprRef) -> ExprRef:
+def max_expr(a: ArithRef, b: ArithRef) -> ArithRef:
     return If(a <= b, b, a)
 
 

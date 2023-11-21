@@ -8,9 +8,6 @@ from symbolic.squeue import SymbolicQueue
 
 
 class RateLimiter(TimeIndexedStructure):
-    def eval(self, model: ModelRef):
-        return self.out.eval(model)
-
     in_queue_size: int
     queue: SymbolicQueue
     out: SymbolicHistory
@@ -39,3 +36,6 @@ class RateLimiter(TimeIndexedStructure):
             self.__constrs.append(If(self.queue.deqs[t] == 1, self.out[t] == self.queue.head_pkt(t), self.out[t] == 0))
             pass
         self.__constrs.extend(constrs)
+
+    def eval(self, model: ModelRef):
+        return self.out.eval(model)

@@ -1,6 +1,4 @@
-from symbolic.arr import IntArray
 from symbolic.hist import non_trivial_hist
-from symbolic.smt_solver import SmtSolver
 from symbolic.test_util import instantiate
 
 
