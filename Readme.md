@@ -1,4 +1,4 @@
-### Getting Started
+### How to Run the Examples
 
 1. Make sure you have `python>=3.9` and `venv` installed
 
