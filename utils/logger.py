@@ -1,3 +1,6 @@
+import itertools
+import threading
+import time
 from enum import IntEnum, Enum
 
 
@@ -53,6 +56,18 @@ class Logger:
     @staticmethod
     def debug(msg: str):
         Logger.log(LogLevel.debug, msg)
+
+    @staticmethod
+    def loading(msg: str, target):
+        chars = ['\\', '|', '/', '-']
+        thread = threading.Thread(target=target)
+        thread.start()
+        for c in itertools.cycle(chars):
+            print("\r\033[K{} {}".format(c, msg), flush=True, end='')
+            thread.join(0.5)
+            if not thread.is_alive():
+                break
+        print("")
 
 
 Logger.level = LogLevel.error

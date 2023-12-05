@@ -1,3 +1,7 @@
+import itertools
+import threading
+import time
+
 from z3 import And, Not
 
 from symbolic.hist import single_id_hist
@@ -6,6 +10,7 @@ from schedulers.rr import RoundRobinScheduler
 from symbolic.smt_solver import SmtSolver
 from symbolic.util import abs_expr
 from symbolic.util import exists, forall
+from utils.logger import Logger
 
 
 def cc_example():
@@ -52,7 +57,7 @@ def cc_example():
     s.add_constr(p1, "P1")
     # s.add_constr(p2, "P2")
     s.add_constr(Not(q), "~Q")
-    s.check_unsat()
+    Logger.loading("Checking unsat", s.check_unsat)
 
 
 def gap_example():
@@ -98,8 +103,7 @@ def gap_example():
     s.add_constr(p1, "P1")
     # s.add_constr(p2, "P2")
     s.add_constr(Not(q), "~Q")
-
-    s.check_unsat()
+    Logger.loading("Checking unsat", s.check_unsat)
 
 
 def main():
