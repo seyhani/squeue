@@ -15,15 +15,18 @@ def cc_example():
 
     ha1 = single_id_hist("ha1", T, 1)
     ha2 = single_id_hist("ha2", T, 2)
-    rr1 = RoundRobinScheduler("rr1", T, qs, [ha1, ha2])
-    s.add_struct(rr1)
+    rra = RoundRobinScheduler("rra", T, qs, [ha1, ha2])
+    ha = rra.out
+    s.add_struct(rra)
 
     hb1 = single_id_hist("hb1", T, 1)
     hb2 = single_id_hist("hb2", T, 2)
-    rr2 = RoundRobinScheduler("rr2", T, qs, [hb1, hb2])
-    s.add_struct(rr2)
+    rrb = RoundRobinScheduler("rrb", T, qs, [hb1, hb2])
+    hb = rrb.out
+    s.add_struct(rrb)
 
-    rro = RoundRobinScheduler("rr", T, qs, [rr1.out, rr2.out])
+    rro = RoundRobinScheduler("rr", T, qs, [rra.out, rrb.out])
+    ho = rro.out
     s.add_struct(rro)
 
     p = And(
@@ -38,18 +41,18 @@ def cc_example():
     )
 
     p2 = And(
-        forall(lambda t: (rr1.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
-        forall(lambda t: (rr2.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
-        (rr2.out | 2).cc() <= 0
+        forall(lambda t: (ha | 1).cc(t) >= (ha | 2).cc(t), range(1, T)),
+        forall(lambda t: (hb | 1).cc(t) >= (ha | 2).cc(t), range(1, T)),
+        (hb | 2).cc() <= 0
     )
 
-    q = exists(lambda t: (rro.out | 1).cc(t) - (rro.out | 2).cc(t) >= 4, range(1, T))
+    q = exists(lambda t: (ho | 1).cc(t) - (ho | 2).cc(t) >= 4, range(1, T))
 
     s.add_constr(p, "P")
     s.add_constr(p1, "P1")
     # s.add_constr(p2, "P2")
     s.add_constr(Not(q), "~Q")
-    # s.check_unsat()
+    s.check_unsat()
 
 
 def gap_example():
@@ -59,7 +62,9 @@ def gap_example():
     h1 = single_id_hist("h1", T, 1)
     h2 = single_id_hist("h2", T, 2)
     rr = RoundRobinScheduler("rr", T, 5, [h1, h2])
+    hrr = rr.out
     rl = RateLimiter("rl", T, 2, rr.out)
+    hrl = rl.out
     out = rl.out
 
     p = And(
@@ -77,13 +82,13 @@ def gap_example():
     )
 
     p2 = And(
-        rr.out.project(1).maxg() == 1,
-        rr.out.project(1).ming() == 1,
-        rr.out.maxg() <= 0
+        hrr.project(1).maxg() == 1,
+        hrr.project(1).ming() == 1,
+        hrr.maxg() <= 0
     )
 
     q = And(
-        exists(lambda t: abs_expr(out.project(1).cc(t) - out.project(2).cc(t)) >= 4, range(T)),
+        exists(lambda t: abs_expr((hrl | 1).cc(t) - (hrl | 2).cc(t)) >= 4, range(T)),
     )
 
     s.add_struct(rr)
