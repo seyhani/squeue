@@ -32,7 +32,10 @@ class SmtSolver:
             Logger.warn("Using implicit label for constr: {}".format(str(expr)))
 
         if label in self.constrs:
-            Logger.warn("Duplicate constraint label: {}".format(label))
+            Logger.warn("Duplicate constraint: {}".format(label))
+            return
+
+        Logger.debug("Adding constraint: {}".format(label))
 
         self.constrs[label] = expr
         self.solver.assert_and_track(expr, label)

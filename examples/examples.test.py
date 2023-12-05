@@ -16,17 +16,14 @@ def cc_example():
     ha1 = single_id_hist("ha1", T, 1)
     ha2 = single_id_hist("ha2", T, 2)
     rr1 = RoundRobinScheduler("rr1", T, qs, [ha1, ha2])
-    rr1.run()
     s.add_struct(rr1)
 
     hb1 = single_id_hist("hb1", T, 1)
     hb2 = single_id_hist("hb2", T, 2)
     rr2 = RoundRobinScheduler("rr2", T, qs, [hb1, hb2])
-    rr2.run()
     s.add_struct(rr2)
 
     rro = RoundRobinScheduler("rr", T, qs, [rr1.out, rr2.out])
-    rro.run()
     s.add_struct(rro)
 
     p = And(
@@ -35,6 +32,12 @@ def cc_example():
     )
 
     p1 = And(
+        forall(lambda t: (ha1 | 1).cc(t) >= (ha2 | 2).cc(t), range(1, T)),
+        forall(lambda t: (hb1 | 1).cc(t) >= (ha2 | 2).cc(t), range(1, T)),
+        (hb2 | 2).cc() <= 0
+    )
+
+    p2 = And(
         forall(lambda t: (rr1.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
         forall(lambda t: (rr2.out | 1).cc(t) >= (rr1.out | 2).cc(t), range(1, T)),
         (rr2.out | 2).cc() <= 0
@@ -42,26 +45,16 @@ def cc_example():
 
     q = exists(lambda t: (rro.out | 1).cc(t) - (rro.out | 2).cc(t) >= 4, range(1, T))
 
-    s.add_constr(p)
-    s.add_constr(p1)
-    # s.add_constr(q)
-    s.add_constr(Not(q))
-    # s.add_constr(exists(lambda t: rr.out[t] == 0, 3, T))
-    # s.add_constr(Or([) for t in range(2, T)]))
-    m = s.check_sat()
-    print("h11: ", ha1.eval(m))
-    print("h12: ", ha2.eval(m))
-    print("h21: ", hb1.eval(m))
-    print("h22: ", hb2.eval(m))
-    print("rr1: ", rr1.out.eval(m))
-    print("rr2: ", rr2.out.eval(m))
-    print("rro: ", rro.out.eval(m))
+    s.add_constr(p, "P")
+    s.add_constr(p1, "P1")
+    # s.add_constr(p2, "P2")
+    s.add_constr(Not(q), "~Q")
+    # s.check_unsat()
 
 
 def gap_example():
     T = 25
     pc = 8
-    ht = 3 * pc + 1
     s = SmtSolver()
     h1 = single_id_hist("h1", T, 1)
     h2 = single_id_hist("h2", T, 2)
@@ -73,15 +66,17 @@ def gap_example():
         h1.maxg() <= 2,
         h1.cc(1) >= 1,
         h1.cc() >= pc,
-        # forall(lambda t: h1[t] == 0, range(ht, T)),
         h2.maxg() <= 2,
         h2.cc(1) >= 1,
         h2.cc() >= pc,
-        # forall(lambda t: h2[t] == 0, range(ht, T)),
     )
 
     p1 = And(
-        # forall(lambda t: Implies(And(rr.out[t - 1] > 0, rr.out[t] > 0), rr.out[t - 1] != rr.out[t]), range(1, T)),
+        h1.maxg() <= 1,
+        h2.maxg() <= 1
+    )
+
+    p2 = And(
         rr.out.project(1).maxg() == 1,
         rr.out.project(1).ming() == 1,
         rr.out.maxg() <= 0
@@ -91,23 +86,15 @@ def gap_example():
         exists(lambda t: abs_expr(out.project(1).cc(t) - out.project(2).cc(t)) >= 4, range(T)),
     )
 
-    rr.run()
     s.add_struct(rr)
-    rl.run()
     s.add_struct(rl)
 
-    s.add_constr(p)
-    s.add_constr(p1)
-    # s.add_constr(Not(p1))
-    # s.add_constr(q)
-    s.add_constr(Not(q))
+    s.add_constr(p, "P")
+    s.add_constr(p1, "P1")
+    # s.add_constr(p2, "P2")
+    s.add_constr(Not(q), "~Q")
 
-    m = s.check_sat()
-
-    print("h1: ", h1.eval(m))
-    print("h2: ", h2.eval(m))
-    print("rr: ", rr.eval(m))
-    print("rl: ", rl.eval(m))
+    s.check_unsat()
 
 
 def main():
