@@ -103,6 +103,14 @@ def single_id_hist(name: str, total_time: int, idx: int):
     return hist
 
 
+def multiple_id_hist(name: str, total_time: int, ids: List[int]):
+    hist = SymbolicHistory(name, total_time)
+    for t in range(total_time):
+        hist.add_constr(LabeledExpr(
+            Or(hist[t] == 0, Or([hist[t] == idx for idx in ids])), "{}[{}] = {}|{}".format(hist.name, t, 0, ids)))
+    return hist
+
+
 def non_trivial_hist(name: str, total_time: int, idx: int):
     hist = single_id_hist(name, total_time, idx)
     hist.add_constr(LabeledExpr(hist.cc(1) > 0, "{}::cc({}) > {}".format(hist.name, 1, 0)))
